@@ -46,7 +46,6 @@ export default function App(): ReactElement {
     // Batch revoke
     const {
         batchState,
-        startBatch,
         executeBatch,
         cancelBatch,
     } = useBatchRevoke();
@@ -95,9 +94,8 @@ export default function App(): ReactElement {
     }, [approvals, selectedIds]);
 
     const handleBatchExecute = useCallback((): void => {
-        startBatch(selectedApprovals);
-        void executeBatch();
-    }, [selectedApprovals, startBatch, executeBatch]);
+        void executeBatch(selectedApprovals);
+    }, [selectedApprovals, executeBatch]);
 
     const handleBatchCancel = useCallback((): void => {
         cancelBatch();

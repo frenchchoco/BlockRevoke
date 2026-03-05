@@ -15,7 +15,7 @@ interface BatchRevokeState {
 interface UseBatchRevokeReturn {
     batchState: BatchRevokeState | null;
     startBatch: (approvals: Approval[]) => void;
-    executeBatch: () => Promise<void>;
+    executeBatch: (approvals: Approval[]) => Promise<void>;
     cancelBatch: () => void;
     reset: () => void;
 }
@@ -23,13 +23,11 @@ interface UseBatchRevokeReturn {
 export function useBatchRevoke(): UseBatchRevokeReturn {
     const [batchState, setBatchState] = useState<BatchRevokeState | null>(null);
     const cancelledRef = useRef(false);
-    const approvalsRef = useRef<Approval[]>([]);
 
     const { walletAddress, networkId } = useWallet();
     const removeApproval = useApprovalStore((s) => s.removeApproval);
 
     const startBatch = useCallback((approvals: Approval[]): void => {
-        approvalsRef.current = approvals;
         cancelledRef.current = false;
 
         const items: BatchRevokeItem[] = approvals.map((a) => ({
@@ -47,30 +45,35 @@ export function useBatchRevoke(): UseBatchRevokeReturn {
         });
     }, []);
 
-    const executeBatch = useCallback(async (): Promise<void> => {
-        if (!walletAddress || !batchState) return;
+    const executeBatch = useCallback(async (approvals: Approval[]): Promise<void> => {
+        if (!walletAddress || approvals.length === 0) return;
 
         cancelledRef.current = false;
-        const approvals = approvalsRef.current;
-        const items = [...batchState.items];
 
-        setBatchState((prev) =>
-            prev ? { ...prev, isRunning: true, completedCount: 0 } : prev,
-        );
+        const items: BatchRevokeItem[] = approvals.map((a) => ({
+            approvalId: a.id,
+            status: 'pending' as const,
+            txHash: null,
+            error: null,
+        }));
+
+        setBatchState({
+            items: [...items],
+            isRunning: true,
+            completedCount: 0,
+            totalCount: items.length,
+        });
 
         let completed = 0;
 
-        for (let i = 0; i < items.length; i++) {
+        for (let i = 0; i < approvals.length; i++) {
             if (cancelledRef.current) break;
 
-            const item = items[i];
-            if (!item) continue;
-
-            const approval = approvals.find((a) => a.id === item.approvalId);
+            const approval = approvals[i];
             if (!approval) continue;
 
             // Set status to signing
-            items[i] = { ...item, status: 'signing', txHash: null, error: null };
+            items[i] = { approvalId: approval.id, status: 'signing', txHash: null, error: null };
             setBatchState({
                 items: [...items],
                 isRunning: true,
@@ -90,17 +93,17 @@ export function useBatchRevoke(): UseBatchRevokeReturn {
                 recordRevokeUsage(walletAddress);
                 removeApproval(approval.id);
 
-                items[i] = { ...item, status: 'success', txHash, error: null };
+                items[i] = { approvalId: approval.id, status: 'success', txHash, error: null };
                 completed++;
             } catch (err: unknown) {
                 const msg = err instanceof Error ? err.message : String(err);
-                items[i] = { ...item, status: 'failed', txHash: null, error: msg };
+                items[i] = { approvalId: approval.id, status: 'failed', txHash: null, error: msg };
                 completed++;
             }
 
             setBatchState({
                 items: [...items],
-                isRunning: !cancelledRef.current && i < items.length - 1,
+                isRunning: !cancelledRef.current && i < approvals.length - 1,
                 completedCount: completed,
                 totalCount: items.length,
             });
@@ -109,7 +112,7 @@ export function useBatchRevoke(): UseBatchRevokeReturn {
         setBatchState((prev) =>
             prev ? { ...prev, isRunning: false } : prev,
         );
-    }, [walletAddress, networkId, batchState, removeApproval]);
+    }, [walletAddress, networkId, removeApproval]);
 
     const cancelBatch = useCallback((): void => {
         cancelledRef.current = true;
@@ -120,7 +123,6 @@ export function useBatchRevoke(): UseBatchRevokeReturn {
 
     const reset = useCallback((): void => {
         cancelledRef.current = true;
-        approvalsRef.current = [];
         setBatchState(null);
     }, []);
 
