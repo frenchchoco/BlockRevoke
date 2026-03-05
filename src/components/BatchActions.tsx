@@ -2,16 +2,10 @@ import type { ReactElement } from 'react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import type { Approval, BatchRevokeItem } from '../types/approval';
+import type { BatchRevokeState } from '../hooks/useBatchRevoke';
 import { formatSats } from '../lib/formatters';
 import { Loader2, Check, X, Circle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-interface BatchRevokeState {
-    items: BatchRevokeItem[];
-    isRunning: boolean;
-    completedCount: number;
-    totalCount: number;
-}
 
 interface BatchActionsProps {
     readonly selectedApprovals: Approval[];
@@ -138,7 +132,7 @@ export function BatchActions({
                                     {paidCount > 0 ? `${paidCount} x ${formatSats(feeSats)}` : null}
                                 </>
                             ) : (
-                                `Free (${freeRemaining - count} remaining after)`
+                                `Free (${Math.max(0, freeRemaining - count)} remaining after)`
                             )}
                         </span>
                     </div>

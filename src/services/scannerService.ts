@@ -3,8 +3,6 @@ import { BinaryReader, type Address } from '@btc-vision/transaction';
 import type { NetworkId } from '../types/network';
 import { getReadProvider } from './providerService';
 
-// ---- Public types ---- //
-
 export interface DiscoveredApproval {
     readonly tokenAddress: string;
     readonly spenderAddress: string;
@@ -20,8 +18,6 @@ export interface ScanCallbacks {
     onComplete: (lastScannedBlock: number) => void;
     onError: (error: string) => void;
 }
-
-// ---- Decoded event helpers ---- //
 
 interface DecodedApprovedEvent {
     readonly owner: Address;
@@ -44,8 +40,6 @@ function decodeApprovedEvent(data: Uint8Array): DecodedApprovedEvent {
     const amount = reader.readU256();
     return { owner, spender, amount };
 }
-
-// ---- Scanner ---- //
 
 const BATCH_SIZE = 5;
 
@@ -100,8 +94,6 @@ export class BlockScanner {
     stop(): void {
         this.cancelled = true;
     }
-
-    // ---- internals ---- //
 
     private async processBlock(
         blockNumber: number,

@@ -1,4 +1,4 @@
-import { type ReactElement, useState, useMemo, useCallback } from 'react';
+import { type ReactElement, useState, useMemo, useCallback, useEffect } from 'react';
 import {
     Select,
     SelectContent,
@@ -52,7 +52,7 @@ export function FilterBar({ approvals, onFiltered }: FilterBarProps): ReactEleme
     }, [approvals, riskFilter, searchQuery]);
 
     // Notify parent whenever filtered results change
-    useMemo((): void => {
+    useEffect((): void => {
         onFiltered(filtered);
     }, [filtered, onFiltered]);
 

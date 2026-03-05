@@ -1,10 +1,11 @@
 import { getContract, type IOP20Contract, OP_20_ABI } from 'opnet';
 import { Address } from '@btc-vision/transaction';
+import { toSatoshi, type PsbtOutputExtended } from '@btc-vision/bitcoin';
 import type { NetworkId } from '../types/network';
 import type { Approval, TokenInfo } from '../types/approval';
 import { KNOWN_TOKENS } from '../config/knownTokens';
 import { KNOWN_SPENDERS } from '../config/knownSpenders';
-import { UNLIMITED_THRESHOLD } from '../config/constants';
+import { UNLIMITED_THRESHOLD, DEV_ADDRESS, DEV_FEE_SATS } from '../config/constants';
 import { getReadProvider, getNetwork } from './providerService';
 import { calculateRiskScore } from '../lib/riskScoring';
 import { discoverFactoryTokens } from './factoryService';
@@ -65,7 +66,7 @@ export async function discoverKnownApprovals(
                     const riskScore = calculateRiskScore(allowance, balance, true);
 
                     approvals.push({
-                        id: `${token.address}-${spender.address}`,
+                        id: `${token.address}:${spender.address}`,
                         tokenAddress: token.address,
                         tokenName: token.name,
                         tokenSymbol: token.symbol,
@@ -95,6 +96,7 @@ export async function revokeApproval(
     tokenAddress: string,
     spenderAddress: string,
     currentAllowance: bigint,
+    devFeeRequired: boolean,
 ): Promise<string> {
     const provider = getReadProvider(networkId);
     const network = getNetwork(networkId);
@@ -115,13 +117,21 @@ export async function revokeApproval(
         throw new Error(`Simulation reverted: ${simulation.revert}`);
     }
 
-    const receipt = await simulation.sendTransaction({
+    const devFeeOutputs: PsbtOutputExtended[] = [{
+        address: DEV_ADDRESS,
+        value: toSatoshi(DEV_FEE_SATS),
+    }];
+
+    const txOptions = {
         signer: null,
         mldsaSigner: null,
         refundTo: owner.p2tr(network),
         maximumAllowedSatToSpend: 100_000n,
         network,
-    });
+        ...(devFeeRequired ? { extraOutputs: devFeeOutputs } : {}),
+    };
+
+    const receipt = await simulation.sendTransaction(txOptions);
 
     return receipt.transactionId;
 }
@@ -133,6 +143,7 @@ export async function editAllowance(
     spenderAddress: string,
     currentAllowance: bigint,
     newAllowance: bigint,
+    devFeeRequired: boolean,
 ): Promise<string> {
     const provider = getReadProvider(networkId);
     const network = getNetwork(networkId);
@@ -160,13 +171,21 @@ export async function editAllowance(
         throw new Error(`Simulation reverted: ${simulation.revert}`);
     }
 
-    const receipt = await simulation.sendTransaction({
+    const devFeeOutputs: PsbtOutputExtended[] = [{
+        address: DEV_ADDRESS,
+        value: toSatoshi(DEV_FEE_SATS),
+    }];
+
+    const txOptions = {
         signer: null,
         mldsaSigner: null,
         refundTo: owner.p2tr(network),
         maximumAllowedSatToSpend: 100_000n,
         network,
-    });
+        ...(devFeeRequired ? { extraOutputs: devFeeOutputs } : {}),
+    };
+
+    const receipt = await simulation.sendTransaction(txOptions);
 
     return receipt.transactionId;
 }

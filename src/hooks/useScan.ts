@@ -1,11 +1,8 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { getContract, OP_20_ABI, type IOP20Contract } from 'opnet';
-import { Address } from '@btc-vision/transaction';
 import { toast } from 'sonner';
 import { useWallet } from './useWallet';
 import { useScanStore } from '../stores/scanStore';
 import { useApprovalStore } from '../stores/approvalStore';
-import { getReadProvider, getNetwork } from '../services/providerService';
 import {
     BlockScanner,
     type DiscoveredApproval,
@@ -16,71 +13,11 @@ import {
     cacheApproval,
     addHistoryEntry,
 } from '../services/cacheService';
+import { fetchTokenMeta } from '../services/tokenService';
 import { KNOWN_SPENDERS } from '../config/knownSpenders';
 import { UNLIMITED_THRESHOLD } from '../config/constants';
 import { calculateRiskScore } from '../lib/riskScoring';
 import type { Approval, ApprovalHistory } from '../types/approval';
-import type { NetworkId } from '../types/network';
-
-// ---- Token metadata cache ---- //
-
-interface TokenMeta {
-    readonly name: string;
-    readonly symbol: string;
-    readonly decimals: number;
-}
-
-const tokenMetaCache = new Map<string, TokenMeta>();
-
-async function fetchTokenMeta(
-    tokenAddress: string,
-    networkId: NetworkId,
-): Promise<TokenMeta> {
-    const cached = tokenMetaCache.get(tokenAddress);
-    if (cached) return cached;
-
-    const provider = getReadProvider(networkId);
-    const network = getNetwork(networkId);
-    const addr = Address.fromString(tokenAddress);
-
-    const contract = getContract<IOP20Contract>(
-        addr,
-        OP_20_ABI,
-        provider,
-        network,
-    );
-
-    let name = 'Unknown';
-    let symbol = '???';
-    let decimals = 8;
-
-    try {
-        const meta = await contract.metadata();
-        name = meta.properties.name;
-        symbol = meta.properties.symbol;
-        decimals = meta.properties.decimals;
-    } catch {
-        // Fallback: try individual calls
-        try {
-            const n = await contract.name();
-            name = n.properties.name;
-        } catch { /* keep default */ }
-        try {
-            const s = await contract.symbol();
-            symbol = s.properties.symbol;
-        } catch { /* keep default */ }
-        try {
-            const d = await contract.decimals();
-            decimals = d.properties.decimals;
-        } catch { /* keep default */ }
-    }
-
-    const meta: TokenMeta = { name, symbol, decimals };
-    tokenMetaCache.set(tokenAddress, meta);
-    return meta;
-}
-
-// ---- Hook ---- //
 
 interface UseScanReturn {
     readonly isScanning: boolean;
@@ -155,7 +92,7 @@ export function useScan(): UseScanReturn {
                                 );
 
                                 const approval: Approval = {
-                                    id: `${discovered.tokenAddress}-${discovered.spenderAddress}`,
+                                    id: `${discovered.tokenAddress}:${discovered.spenderAddress}`,
                                     tokenAddress: discovered.tokenAddress,
                                     tokenName: meta.name,
                                     tokenSymbol: meta.symbol,

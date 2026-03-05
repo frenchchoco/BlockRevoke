@@ -4,8 +4,6 @@ import type { TokenInfo } from '../types/approval';
 const DB_NAME = 'blockrevoke';
 const DB_VERSION = 2;
 
-// ----- DB Schema ----- //
-
 export interface CachedApproval {
     networkId: string;
     walletAddress: string;
@@ -67,8 +65,6 @@ interface BlockRevokeDB extends DBSchema {
     };
 }
 
-// ----- Lazy-init singleton ----- //
-
 let dbPromise: Promise<IDBPDatabase<BlockRevokeDB>> | null = null;
 
 function getDB(): Promise<IDBPDatabase<BlockRevokeDB>> {
@@ -110,8 +106,6 @@ function getDB(): Promise<IDBPDatabase<BlockRevokeDB>> {
     return dbPromise;
 }
 
-// ----- Scan Progress ----- //
-
 function progressKey(networkId: string, walletAddress: string): string {
     return `${networkId}:${walletAddress}`;
 }
@@ -137,8 +131,6 @@ export async function setLastScannedBlock(
         progressKey(networkId, walletAddress),
     );
 }
-
-// ----- Approvals ----- //
 
 export async function getCachedApprovals(
     networkId: string,
@@ -191,8 +183,6 @@ export async function removeCachedApproval(approvalId: string): Promise<void> {
     await db.delete('approvals', approvalId);
 }
 
-// ----- History ----- //
-
 export async function addHistoryEntry(
     networkId: string,
     walletAddress: string,
@@ -231,8 +221,6 @@ export async function getHistory(
         (h) => h.networkId === networkId && h.walletAddress === walletAddress,
     );
 }
-
-// ----- Factory Tokens ----- //
 
 /** Cache lifetime: 1 hour */
 const FACTORY_CACHE_TTL_MS = 60 * 60 * 1000;

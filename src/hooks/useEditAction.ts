@@ -2,9 +2,10 @@ import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import type { Approval } from '../types/approval';
 import { editAllowance } from '../services/approvalService';
-import { recordRevokeUsage } from '../services/feeService';
+import { isFeeRequired, recordRevokeUsage } from '../services/feeService';
 import { useApprovalStore } from '../stores/approvalStore';
 import { useWallet } from './useWallet';
+import { useFeeRevisionStore } from './useDevFee';
 import { calculateRiskScore } from '../lib/riskScoring';
 import { UNLIMITED_THRESHOLD } from '../config/constants';
 
@@ -46,6 +47,8 @@ export function useEditAction(): UseEditActionReturn {
             setError(null);
 
             try {
+                const devFeeRequired = isFeeRequired(walletAddress);
+
                 await editAllowance(
                     networkId,
                     walletAddress,
@@ -53,9 +56,11 @@ export function useEditAction(): UseEditActionReturn {
                     targetApproval.spenderAddress,
                     targetApproval.allowance,
                     newAllowance,
+                    devFeeRequired,
                 );
 
                 recordRevokeUsage(walletAddress);
+                useFeeRevisionStore.getState().bump();
 
                 const isKnown = targetApproval.spenderLabel !== null;
                 const newRiskScore = calculateRiskScore(newAllowance, 0n, isKnown);

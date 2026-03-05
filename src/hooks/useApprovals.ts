@@ -3,6 +3,9 @@ import { toast } from 'sonner';
 import { useApprovalStore } from '../stores/approvalStore';
 import { useWallet } from './useWallet';
 import { discoverKnownApprovals } from '../services/approvalService';
+import { getCachedApprovals } from '../services/cacheService';
+import { UNLIMITED_THRESHOLD } from '../config/constants';
+import { calculateRiskScore } from '../lib/riskScoring';
 import type { Approval, ApprovalHistory } from '../types/approval';
 
 interface UseApprovalsReturn {
@@ -29,9 +32,40 @@ export function useApprovals(): UseApprovalsReturn {
 
         let cancelled = false;
 
-        const discover = async (): Promise<void> => {
+        const loadCachedAndDiscover = async (): Promise<void> => {
             setIsLoading(true);
             setError(null);
+
+            // Load cached approvals from IndexedDB first for instant display
+            try {
+                const cached = await getCachedApprovals(networkId, walletAddress);
+                if (!cancelled && cached.length > 0) {
+                    const cachedApprovals: Approval[] = cached.map((c) => {
+                        const allowance = BigInt(c.allowance);
+                        const isKnown = c.spenderLabel !== null;
+                        return {
+                            id: `${c.tokenAddress}:${c.spenderAddress}`,
+                            tokenAddress: c.tokenAddress,
+                            tokenName: c.tokenName,
+                            tokenSymbol: c.tokenSymbol,
+                            tokenDecimals: c.tokenDecimals,
+                            spenderAddress: c.spenderAddress,
+                            spenderLabel: c.spenderLabel,
+                            allowance,
+                            isUnlimited: allowance >= UNLIMITED_THRESHOLD,
+                            riskScore: calculateRiskScore(allowance, 0n, isKnown),
+                            discoveredVia: c.discoveredVia as Approval['discoveredVia'],
+                            lastUpdatedBlock: c.lastUpdatedBlock,
+                            lastUpdatedTxHash: c.lastUpdatedTxHash,
+                        };
+                    });
+                    addApprovals(cachedApprovals);
+                }
+            } catch {
+                // IndexedDB read failed; continue with RPC discovery
+            }
+
+            // Then discover fresh approvals via RPC
             try {
                 const found = await discoverKnownApprovals(networkId, walletAddress);
                 if (!cancelled) {
@@ -50,7 +84,7 @@ export function useApprovals(): UseApprovalsReturn {
             }
         };
 
-        void discover();
+        void loadCachedAndDiscover();
 
         return (): void => {
             cancelled = true;

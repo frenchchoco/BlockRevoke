@@ -2,9 +2,11 @@ import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import type { Approval } from '../types/approval';
 import { revokeApproval } from '../services/approvalService';
-import { recordRevokeUsage } from '../services/feeService';
+import { isFeeRequired, recordRevokeUsage } from '../services/feeService';
+import { removeCachedApproval } from '../services/cacheService';
 import { useApprovalStore } from '../stores/approvalStore';
 import { useWallet } from './useWallet';
+import { useFeeRevisionStore } from './useDevFee';
 
 interface UseRevokeActionReturn {
     targetApproval: Approval | null;
@@ -43,16 +45,21 @@ export function useRevokeAction(): UseRevokeActionReturn {
         setError(null);
 
         try {
+            const devFeeRequired = isFeeRequired(walletAddress);
+
             await revokeApproval(
                 networkId,
                 walletAddress,
                 targetApproval.tokenAddress,
                 targetApproval.spenderAddress,
                 targetApproval.allowance,
+                devFeeRequired,
             );
 
             recordRevokeUsage(walletAddress);
+            useFeeRevisionStore.getState().bump();
             removeApproval(targetApproval.id);
+            void removeCachedApproval(targetApproval.id);
             setTargetApproval(null);
             toast.success('Approval revoked successfully');
         } catch (err: unknown) {

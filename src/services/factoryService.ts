@@ -1,9 +1,7 @@
 import {
     getContract,
-    OP_20_ABI,
     BitcoinAbiTypes,
     ABIDataTypes,
-    type IOP20Contract,
     type CallResult,
     type IOP_NETContract,
     type BitcoinInterfaceAbi,
@@ -13,8 +11,7 @@ import type { NetworkId } from '../types/network';
 import type { TokenInfo } from '../types/approval';
 import { getReadProvider, getNetwork } from './providerService';
 import { getCachedFactoryTokens, cacheFactoryTokens } from './cacheService';
-
-// ---- Local factory ABI (not exported from opnet barrel) ---- //
+import { fetchTokenMeta } from './tokenService';
 
 type GetDeploymentsCount = CallResult<{ count: number }, []>;
 type GetDeploymentByIndex = CallResult<
@@ -52,19 +49,11 @@ const OP20_FACTORY_ABI: BitcoinInterfaceAbi = [
     },
 ];
 
-// ---- Factory addresses per network ---- //
-
 const FACTORY_ADDRESSES: Partial<Record<NetworkId, string>> = {
     // Factory address will be configured once known.
     // mainnet: '0x...factory-address',
     // testnet: '0x...factory-address',
 };
-
-// ---- In-memory metadata cache ---- //
-
-const tokenMetaCache = new Map<string, TokenInfo>();
-
-// ---- Public API ---- //
 
 /**
  * Enumerate ALL tokens deployed via the OP20 Factory for the given network.
@@ -99,54 +88,8 @@ export async function discoverFactoryTokens(
         const tokenAddr = deployment.properties.token;
         const tokenHex = tokenAddr.toHex();
 
-        // Check in-memory cache first
-        const memoryCached = tokenMetaCache.get(tokenHex);
-        if (memoryCached) {
-            tokens.push(memoryCached);
-            continue;
-        }
-
         try {
-            const tokenContract = getContract<IOP20Contract>(
-                tokenAddr,
-                OP_20_ABI,
-                provider,
-                network,
-            );
-
-            let name = 'Unknown';
-            let symbol = '???';
-            let decimals = 8;
-
-            try {
-                const meta = await tokenContract.metadata();
-                name = meta.properties.name;
-                symbol = meta.properties.symbol;
-                decimals = meta.properties.decimals;
-            } catch {
-                // Fallback to individual calls
-                try {
-                    const n = await tokenContract.name();
-                    name = n.properties.name;
-                } catch { /* keep default */ }
-                try {
-                    const s = await tokenContract.symbol();
-                    symbol = s.properties.symbol;
-                } catch { /* keep default */ }
-                try {
-                    const d = await tokenContract.decimals();
-                    decimals = d.properties.decimals;
-                } catch { /* keep default */ }
-            }
-
-            const info: TokenInfo = {
-                address: tokenHex,
-                name,
-                symbol,
-                decimals,
-            };
-
-            tokenMetaCache.set(tokenHex, info);
+            const info = await fetchTokenMeta(tokenHex, networkId);
             tokens.push(info);
         } catch {
             // Skip tokens we can't fetch metadata for
