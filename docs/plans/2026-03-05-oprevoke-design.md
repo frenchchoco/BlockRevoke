@@ -1,11 +1,11 @@
-# OPRevoke - Design Document
+# BlockRevoke - Design Document
 
 **Date:** 2026-03-05
 **Status:** Approved
 
 ## Overview
 
-OPRevoke is a decentralized dApp for OPNet that allows users to view, manage, and revoke OP20 token approvals. Inspired by Revoke.cash on Ethereum, adapted for OPNet's architecture.
+BlockRevoke is a decentralized dApp for OPNet that allows users to view, manage, and revoke OP20 token approvals. Inspired by Revoke.cash on Ethereum, adapted for OPNet's architecture.
 
 ## Tech Stack
 
@@ -139,7 +139,7 @@ Factors:
 
 ### Single Page with Sections
 
-1. **Header**: Logo "OPRevoke", Network switch (Testnet/Mainnet), Connect Wallet button
+1. **Header**: Logo "BlockRevoke", Network switch (Testnet/Mainnet), Connect Wallet button
 2. **Dashboard Summary**: Total approvals count, global risk indicator, scan progress bar
 3. **Filters**: By risk level, by token, by spender, search
 4. **Approval Table**:
