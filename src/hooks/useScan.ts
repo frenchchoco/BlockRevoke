@@ -1,6 +1,7 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { getContract, OP_20_ABI, type IOP20Contract } from 'opnet';
 import { Address } from '@btc-vision/transaction';
+import { toast } from 'sonner';
 import { useWallet } from './useWallet';
 import { useScanStore } from '../stores/scanStore';
 import { useApprovalStore } from '../stores/approvalStore';
@@ -107,6 +108,7 @@ export function useScan(): UseScanReturn {
     const addHistory = useApprovalStore((s) => s.addHistory);
 
     const scannerRef = useRef<BlockScanner | null>(null);
+    const foundCountRef = useRef(0);
 
     const startScan = useCallback((): void => {
         if (!isReady || !walletAddress) return;
@@ -116,6 +118,7 @@ export function useScan(): UseScanReturn {
         const net = networkId;
 
         setScanning(true);
+        foundCountRef.current = 0;
 
         void (async (): Promise<void> => {
             try {
@@ -169,6 +172,7 @@ export function useScan(): UseScanReturn {
                                 };
 
                                 addApprovals([approval]);
+                                foundCountRef.current++;
 
                                 // Persist to IndexedDB
                                 await cacheApproval(net, ownerAddress, {
@@ -222,18 +226,26 @@ export function useScan(): UseScanReturn {
                         setScanning(false);
                         scannerRef.current = null;
 
+                        const count = foundCountRef.current;
+                        toast.success(
+                            `Scan complete. Found ${count} approval${count === 1 ? '' : 's'}`,
+                        );
+
                         void setLastScannedBlock(net, ownerAddress, lastBlock);
                     },
 
-                    onError: (error: string): void => {
-                        console.error('[BlockScanner]', error);
+                    onError: (scanError: string): void => {
+                        console.error('[BlockScanner]', scanError);
                         setScanning(false);
                         scannerRef.current = null;
+                        toast.error('Scan failed', { description: scanError });
                     },
                 });
             } catch (err: unknown) {
-                console.error('[useScan] failed to start scan', err);
+                const msg = err instanceof Error ? err.message : String(err);
+                console.error('[useScan] failed to start scan', msg);
                 setScanning(false);
+                toast.error('Scan failed to start', { description: msg });
             }
         })();
     }, [
@@ -253,6 +265,17 @@ export function useScan(): UseScanReturn {
         setScanning(false);
         scannerRef.current = null;
     }, [setScanning]);
+
+    const resetScan = useScanStore((s) => s.reset);
+
+    // Stop any active scan and reset scan state when network or wallet changes
+    useEffect(() => {
+        return (): void => {
+            scannerRef.current?.stop();
+            scannerRef.current = null;
+            resetScan();
+        };
+    }, [walletAddress, networkId, resetScan]);
 
     return {
         isScanning,

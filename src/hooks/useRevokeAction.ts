@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { toast } from 'sonner';
 import type { Approval } from '../types/approval';
 import { revokeApproval } from '../services/approvalService';
 import { recordRevokeUsage } from '../services/feeService';
@@ -53,9 +54,11 @@ export function useRevokeAction(): UseRevokeActionReturn {
             recordRevokeUsage(walletAddress);
             removeApproval(targetApproval.id);
             setTargetApproval(null);
+            toast.success('Approval revoked successfully');
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : String(err);
             setError(msg);
+            toast.error('Revoke failed', { description: msg });
         } finally {
             setIsLoading(false);
         }

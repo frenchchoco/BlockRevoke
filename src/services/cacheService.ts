@@ -1,7 +1,8 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
+import type { TokenInfo } from '../types/approval';
 
 const DB_NAME = 'blockrevoke';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 // ----- DB Schema ----- //
 
@@ -32,6 +33,12 @@ export interface CachedHistory {
     timestamp: number | null;
 }
 
+export interface CachedFactoryTokens {
+    networkId: string;
+    tokens: TokenInfo[];
+    updatedAt: number;
+}
+
 interface BlockRevokeDB extends DBSchema {
     'scan-progress': {
         key: string; // `${networkId}:${walletAddress}`
@@ -53,6 +60,10 @@ interface BlockRevokeDB extends DBSchema {
         indexes: {
             'by-wallet': string;
         };
+    };
+    'factory-tokens': {
+        key: string; // networkId
+        value: CachedFactoryTokens;
     };
 }
 
@@ -87,6 +98,11 @@ function getDB(): Promise<IDBPDatabase<BlockRevokeDB>> {
                         'by-wallet',
                         ['networkId', 'walletAddress'] as unknown as string,
                     );
+                }
+
+                // factory-tokens store (added in v2)
+                if (!db.objectStoreNames.contains('factory-tokens')) {
+                    db.createObjectStore('factory-tokens');
                 }
             },
         });
@@ -214,4 +230,35 @@ export async function getHistory(
     return all.filter(
         (h) => h.networkId === networkId && h.walletAddress === walletAddress,
     );
+}
+
+// ----- Factory Tokens ----- //
+
+/** Cache lifetime: 1 hour */
+const FACTORY_CACHE_TTL_MS = 60 * 60 * 1000;
+
+export async function getCachedFactoryTokens(
+    networkId: string,
+): Promise<TokenInfo[]> {
+    const db = await getDB();
+    const record = await db.get('factory-tokens', networkId);
+    if (!record) return [];
+
+    // Expire stale entries
+    if (Date.now() - record.updatedAt > FACTORY_CACHE_TTL_MS) return [];
+
+    return record.tokens;
+}
+
+export async function cacheFactoryTokens(
+    networkId: string,
+    tokens: TokenInfo[],
+): Promise<void> {
+    const db = await getDB();
+    const value: CachedFactoryTokens = {
+        networkId,
+        tokens,
+        updatedAt: Date.now(),
+    };
+    await db.put('factory-tokens', value, networkId);
 }

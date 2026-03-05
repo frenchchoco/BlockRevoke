@@ -1,5 +1,10 @@
 export const FREE_REVOKE_LIMIT = 3;
 export const DEV_FEE_SATS = 3000n;
-export const DEV_ADDRESS = 'bc1qblockrevoke';
+
+const ENV_DEV_ADDRESS: string | undefined = import.meta.env.VITE_DEV_ADDRESS as
+    | string
+    | undefined;
+export const DEV_ADDRESS: string = ENV_DEV_ADDRESS ?? 'bc1qblockrevoke';
+
 export const U256_MAX = (1n << 256n) - 1n;
 export const UNLIMITED_THRESHOLD = U256_MAX / 2n;

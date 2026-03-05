@@ -1,12 +1,13 @@
 import { getContract, type IOP20Contract, OP_20_ABI } from 'opnet';
 import { Address } from '@btc-vision/transaction';
 import type { NetworkId } from '../types/network';
-import type { Approval } from '../types/approval';
+import type { Approval, TokenInfo } from '../types/approval';
 import { KNOWN_TOKENS } from '../config/knownTokens';
 import { KNOWN_SPENDERS } from '../config/knownSpenders';
 import { UNLIMITED_THRESHOLD } from '../config/constants';
 import { getReadProvider, getNetwork } from './providerService';
 import { calculateRiskScore } from '../lib/riskScoring';
+import { discoverFactoryTokens } from './factoryService';
 
 export async function discoverKnownApprovals(
     networkId: NetworkId,
@@ -16,7 +17,22 @@ export async function discoverKnownApprovals(
     const network = getNetwork(networkId);
     const owner = Address.fromString(ownerAddress);
 
-    const tokens = KNOWN_TOKENS[networkId];
+    // Merge known tokens with factory-discovered tokens (dedup by address)
+    const knownTokens: readonly TokenInfo[] = KNOWN_TOKENS[networkId];
+
+    let factoryTokens: TokenInfo[] = [];
+    try {
+        factoryTokens = await discoverFactoryTokens(networkId);
+    } catch {
+        // Factory discovery failed; continue with known tokens only
+    }
+
+    const seenAddresses = new Set<string>(knownTokens.map((t) => t.address.toLowerCase()));
+    const dedupedFactoryTokens = factoryTokens.filter(
+        (t) => !seenAddresses.has(t.address.toLowerCase()),
+    );
+    const tokens: readonly TokenInfo[] = [...knownTokens, ...dedupedFactoryTokens];
+
     const spenders = KNOWN_SPENDERS[networkId];
     const approvals: Approval[] = [];
 

@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { toast } from 'sonner';
 import type { Approval } from '../types/approval';
 import { editAllowance } from '../services/approvalService';
 import { recordRevokeUsage } from '../services/feeService';
@@ -62,9 +63,11 @@ export function useEditAction(): UseEditActionReturn {
 
                 updateAllowance(targetApproval.id, newAllowance, isUnlimited, newRiskScore);
                 setTargetApproval(null);
+                toast.success('Allowance updated');
             } catch (err: unknown) {
                 const msg = err instanceof Error ? err.message : String(err);
                 setError(msg);
+                toast.error('Edit failed', { description: msg });
             } finally {
                 setIsLoading(false);
             }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { useApprovalStore } from '../stores/approvalStore';
 import { useWallet } from './useWallet';
 import { discoverKnownApprovals } from '../services/approvalService';
@@ -40,6 +41,7 @@ export function useApprovals(): UseApprovalsReturn {
                 if (!cancelled) {
                     const msg = err instanceof Error ? err.message : String(err);
                     setError(msg);
+                    toast.error('Failed to load approvals', { description: msg });
                 }
             } finally {
                 if (!cancelled) {

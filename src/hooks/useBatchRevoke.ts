@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
+import { toast } from 'sonner';
 import type { Approval, BatchRevokeItem } from '../types/approval';
 import { revokeApproval } from '../services/approvalService';
 import { recordRevokeUsage } from '../services/feeService';
@@ -108,6 +109,9 @@ export function useBatchRevoke(): UseBatchRevokeReturn {
                 totalCount: items.length,
             });
         }
+
+        const successCount = items.filter((item) => item.status === 'success').length;
+        toast.success(`${successCount}/${items.length} approvals revoked`);
 
         setBatchState((prev) =>
             prev ? { ...prev, isRunning: false } : prev,
