@@ -73,6 +73,6 @@ export default tseslint.config(
         ...tseslint.configs.disableTypeChecked,
     },
     {
-        ignores: ['.next/', 'out/', 'dist/', 'node_modules/'],
+        ignores: ['.next/', 'out/', 'dist/', 'node_modules/', '**/*.d.ts', '**/*.d.ts.map', 'src/components/ui/'],
     },
 );
