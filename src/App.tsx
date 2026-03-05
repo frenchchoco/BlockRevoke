@@ -7,6 +7,9 @@ import { ApprovalTable } from './components/ApprovalTable';
 import { RevokeConfirmDialog } from './components/RevokeConfirmDialog';
 import { EditModal } from './components/EditModal';
 import { BatchActions } from './components/BatchActions';
+import { ScanProgress } from './components/ScanProgress';
+import { HistoryTimeline } from './components/HistoryTimeline';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
 import { useApprovals } from './hooks/useApprovals';
 import { useWallet } from './hooks/useWallet';
 import { useDevFee } from './hooks/useDevFee';
@@ -105,18 +108,33 @@ export default function App(): ReactElement {
         <div className="min-h-screen flex flex-col bg-zinc-950 text-zinc-100">
             <Header />
             <main className="flex-1 container mx-auto px-4 py-6 max-w-6xl">
-                <DashboardSummary approvals={filteredApprovals} />
-                <FilterBar approvals={approvals} onFiltered={handleFiltered} />
-                <ApprovalTable
-                    approvals={filteredApprovals}
-                    selectedIds={selectedIds}
-                    onSelectToggle={handleSelectToggle}
-                    onSelectAll={handleSelectAll}
-                    onRevoke={handleRevoke}
-                    onEdit={handleEdit}
-                    isLoading={isLoading}
-                    isConnected={isReady}
-                />
+                {isReady ? <ScanProgress /> : null}
+
+                <Tabs defaultValue="approvals" className="w-full">
+                    <TabsList className="mb-4">
+                        <TabsTrigger value="approvals">Approvals</TabsTrigger>
+                        <TabsTrigger value="history">History</TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="approvals">
+                        <DashboardSummary approvals={filteredApprovals} />
+                        <FilterBar approvals={approvals} onFiltered={handleFiltered} />
+                        <ApprovalTable
+                            approvals={filteredApprovals}
+                            selectedIds={selectedIds}
+                            onSelectToggle={handleSelectToggle}
+                            onSelectAll={handleSelectAll}
+                            onRevoke={handleRevoke}
+                            onEdit={handleEdit}
+                            isLoading={isLoading}
+                            isConnected={isReady}
+                        />
+                    </TabsContent>
+
+                    <TabsContent value="history">
+                        <HistoryTimeline />
+                    </TabsContent>
+                </Tabs>
             </main>
             <Footer />
 

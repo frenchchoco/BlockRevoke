@@ -1,0 +1,266 @@
+import { useCallback, useRef } from 'react';
+import { getContract, OP_20_ABI, type IOP20Contract } from 'opnet';
+import { Address } from '@btc-vision/transaction';
+import { useWallet } from './useWallet';
+import { useScanStore } from '../stores/scanStore';
+import { useApprovalStore } from '../stores/approvalStore';
+import { getReadProvider, getNetwork } from '../services/providerService';
+import {
+    BlockScanner,
+    type DiscoveredApproval,
+} from '../services/scannerService';
+import {
+    getLastScannedBlock,
+    setLastScannedBlock,
+    cacheApproval,
+    addHistoryEntry,
+} from '../services/cacheService';
+import { KNOWN_SPENDERS } from '../config/knownSpenders';
+import { UNLIMITED_THRESHOLD } from '../config/constants';
+import { calculateRiskScore } from '../lib/riskScoring';
+import type { Approval, ApprovalHistory } from '../types/approval';
+import type { NetworkId } from '../types/network';
+
+// ---- Token metadata cache ---- //
+
+interface TokenMeta {
+    readonly name: string;
+    readonly symbol: string;
+    readonly decimals: number;
+}
+
+const tokenMetaCache = new Map<string, TokenMeta>();
+
+async function fetchTokenMeta(
+    tokenAddress: string,
+    networkId: NetworkId,
+): Promise<TokenMeta> {
+    const cached = tokenMetaCache.get(tokenAddress);
+    if (cached) return cached;
+
+    const provider = getReadProvider(networkId);
+    const network = getNetwork(networkId);
+    const addr = Address.fromString(tokenAddress);
+
+    const contract = getContract<IOP20Contract>(
+        addr,
+        OP_20_ABI,
+        provider,
+        network,
+    );
+
+    let name = 'Unknown';
+    let symbol = '???';
+    let decimals = 8;
+
+    try {
+        const meta = await contract.metadata();
+        name = meta.properties.name;
+        symbol = meta.properties.symbol;
+        decimals = meta.properties.decimals;
+    } catch {
+        // Fallback: try individual calls
+        try {
+            const n = await contract.name();
+            name = n.properties.name;
+        } catch { /* keep default */ }
+        try {
+            const s = await contract.symbol();
+            symbol = s.properties.symbol;
+        } catch { /* keep default */ }
+        try {
+            const d = await contract.decimals();
+            decimals = d.properties.decimals;
+        } catch { /* keep default */ }
+    }
+
+    const meta: TokenMeta = { name, symbol, decimals };
+    tokenMetaCache.set(tokenAddress, meta);
+    return meta;
+}
+
+// ---- Hook ---- //
+
+interface UseScanReturn {
+    readonly isScanning: boolean;
+    readonly currentBlock: number;
+    readonly latestBlock: number;
+    readonly lastScannedBlock: number;
+    readonly progress: number;
+    readonly startScan: () => void;
+    readonly stopScan: () => void;
+}
+
+export function useScan(): UseScanReturn {
+    const { walletAddress, networkId, isReady } = useWallet();
+    const {
+        isScanning,
+        currentBlock,
+        latestBlock,
+        lastScannedBlock,
+        progress,
+        setScanning,
+        updateProgress,
+        setLastScanned,
+    } = useScanStore();
+    const addApprovals = useApprovalStore((s) => s.addApprovals);
+    const addHistory = useApprovalStore((s) => s.addHistory);
+
+    const scannerRef = useRef<BlockScanner | null>(null);
+
+    const startScan = useCallback((): void => {
+        if (!isReady || !walletAddress) return;
+        if (isScanning) return;
+
+        const ownerAddress = walletAddress;
+        const net = networkId;
+
+        setScanning(true);
+
+        void (async (): Promise<void> => {
+            try {
+                const start = await getLastScannedBlock(net, ownerAddress);
+                // Start from the next block after the last scanned one, or 0 if never scanned
+                const fromBlock = start > 0 ? start + 1 : 0;
+
+                const scanner = new BlockScanner(net, ownerAddress);
+                scannerRef.current = scanner;
+
+                const spenders = KNOWN_SPENDERS[net];
+
+                await scanner.scan(fromBlock, {
+                    onApprovalFound: (discovered: DiscoveredApproval): void => {
+                        void (async (): Promise<void> => {
+                            try {
+                                const meta = await fetchTokenMeta(
+                                    discovered.tokenAddress,
+                                    net,
+                                );
+
+                                const spenderLabel =
+                                    spenders.find(
+                                        (s) =>
+                                            s.address.toLowerCase() ===
+                                            discovered.spenderAddress.toLowerCase(),
+                                    )?.label ?? null;
+
+                                const isKnown = spenderLabel !== null;
+                                const riskScore = calculateRiskScore(
+                                    discovered.allowance,
+                                    0n,
+                                    isKnown,
+                                );
+
+                                const approval: Approval = {
+                                    id: `${discovered.tokenAddress}-${discovered.spenderAddress}`,
+                                    tokenAddress: discovered.tokenAddress,
+                                    tokenName: meta.name,
+                                    tokenSymbol: meta.symbol,
+                                    tokenDecimals: meta.decimals,
+                                    spenderAddress: discovered.spenderAddress,
+                                    spenderLabel,
+                                    allowance: discovered.allowance,
+                                    isUnlimited:
+                                        discovered.allowance >= UNLIMITED_THRESHOLD,
+                                    riskScore,
+                                    discoveredVia: 'scan',
+                                    lastUpdatedBlock: discovered.blockNumber,
+                                    lastUpdatedTxHash: discovered.txHash,
+                                };
+
+                                addApprovals([approval]);
+
+                                // Persist to IndexedDB
+                                await cacheApproval(net, ownerAddress, {
+                                    tokenAddress: discovered.tokenAddress,
+                                    tokenName: meta.name,
+                                    tokenSymbol: meta.symbol,
+                                    tokenDecimals: meta.decimals,
+                                    spenderAddress: discovered.spenderAddress,
+                                    spenderLabel,
+                                    allowance: discovered.allowance,
+                                    discoveredVia: 'scan',
+                                    lastUpdatedBlock: discovered.blockNumber,
+                                    lastUpdatedTxHash: discovered.txHash,
+                                });
+
+                                // Add history entry
+                                const historyEntry: ApprovalHistory = {
+                                    id: `${discovered.txHash}-${discovered.tokenAddress}-${discovered.spenderAddress}`,
+                                    tokenAddress: discovered.tokenAddress,
+                                    spenderAddress: discovered.spenderAddress,
+                                    previousAllowance: 0n,
+                                    newAllowance: discovered.allowance,
+                                    txHash: discovered.txHash,
+                                    blockNumber: discovered.blockNumber,
+                                    timestamp: null,
+                                };
+
+                                addHistory(historyEntry);
+
+                                await addHistoryEntry(net, ownerAddress, {
+                                    tokenAddress: discovered.tokenAddress,
+                                    spenderAddress: discovered.spenderAddress,
+                                    previousAllowance: 0n,
+                                    newAllowance: discovered.allowance,
+                                    txHash: discovered.txHash,
+                                    blockNumber: discovered.blockNumber,
+                                    timestamp: null,
+                                });
+                            } catch {
+                                // Metadata fetch failed; skip this approval silently
+                            }
+                        })();
+                    },
+
+                    onProgress: (current: number, latest: number): void => {
+                        updateProgress(current, latest);
+                    },
+
+                    onComplete: (lastBlock: number): void => {
+                        setLastScanned(lastBlock);
+                        setScanning(false);
+                        scannerRef.current = null;
+
+                        void setLastScannedBlock(net, ownerAddress, lastBlock);
+                    },
+
+                    onError: (error: string): void => {
+                        console.error('[BlockScanner]', error);
+                        setScanning(false);
+                        scannerRef.current = null;
+                    },
+                });
+            } catch (err: unknown) {
+                console.error('[useScan] failed to start scan', err);
+                setScanning(false);
+            }
+        })();
+    }, [
+        isReady,
+        walletAddress,
+        isScanning,
+        networkId,
+        setScanning,
+        updateProgress,
+        setLastScanned,
+        addApprovals,
+        addHistory,
+    ]);
+
+    const stopScan = useCallback((): void => {
+        scannerRef.current?.stop();
+        setScanning(false);
+        scannerRef.current = null;
+    }, [setScanning]);
+
+    return {
+        isScanning,
+        currentBlock,
+        latestBlock,
+        lastScannedBlock,
+        progress,
+        startScan,
+        stopScan,
+    };
+}
