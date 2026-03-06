@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { HeroBanner } from './components/HeroBanner';
+import { HowItWorks } from './components/HowItWorks';
 import { NetworkSync } from './components/NetworkSync';
 import { DashboardSummary } from './components/DashboardSummary';
 import { FilterBar } from './components/FilterBar';
@@ -131,6 +132,7 @@ export default function App(): ReactElement {
                     transition={{ duration: 0.5, delay: 0.2 }}
                 >
                     <HeroBanner />
+                    <HowItWorks />
 
                     {isReady ? <ScanProgress /> : null}
 
