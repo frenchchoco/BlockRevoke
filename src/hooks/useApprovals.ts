@@ -25,8 +25,10 @@ export function useApprovals(): UseApprovalsReturn {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
+        // Always clear previous data when wallet/network changes
+        clearAll();
+
         if (!isReady || !walletAddress || !address) {
-            clearAll();
             return;
         }
 

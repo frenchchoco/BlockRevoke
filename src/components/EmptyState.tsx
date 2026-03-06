@@ -10,7 +10,7 @@ interface EmptyStateProps {
 export function EmptyState({ variant }: EmptyStateProps): ReactElement {
     if (variant === 'loading') {
         return (
-            <div className="flex flex-col items-center justify-center py-16 text-zinc-400">
+            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
                 <Loader2 className="size-10 animate-spin mb-4" />
                 <p className="text-sm">Scanning for approvals...</p>
             </div>
@@ -19,7 +19,7 @@ export function EmptyState({ variant }: EmptyStateProps): ReactElement {
 
     if (variant === 'disconnected') {
         return (
-            <div className="flex flex-col items-center justify-center py-16 text-zinc-400">
+            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
                 <Wallet className="size-10 mb-4" />
                 <p className="text-sm">Connect your wallet to scan for token approvals</p>
             </div>
@@ -27,7 +27,7 @@ export function EmptyState({ variant }: EmptyStateProps): ReactElement {
     }
 
     return (
-        <div className="flex flex-col items-center justify-center py-16 text-zinc-400">
+        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
             <ShieldCheck className="size-10 mb-4 text-green-500" />
             <p className="text-sm">No active approvals found. Your tokens are safe!</p>
         </div>

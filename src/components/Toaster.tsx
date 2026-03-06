@@ -1,23 +1,15 @@
 import type { ReactElement } from 'react';
+import { useTheme } from 'next-themes';
 import { Toaster as Sonner } from 'sonner';
 
-/**
- * App-level toaster configured for dark theme.
- * Place once inside the root component tree.
- */
 export function Toaster(): ReactElement {
+    const { resolvedTheme } = useTheme();
+
     return (
         <Sonner
-            theme="dark"
+            theme={resolvedTheme === 'dark' ? 'dark' : 'light'}
             position="bottom-right"
             richColors
-            toastOptions={{
-                style: {
-                    background: 'var(--popover)',
-                    color: 'var(--popover-foreground)',
-                    border: '1px solid var(--border)',
-                },
-            }}
         />
     );
 }

@@ -90,7 +90,7 @@ export function FilterBar({ approvals, onFiltered }: FilterBarProps): ReactEleme
                 </SelectContent>
             </Select>
             <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-zinc-500" />
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                 <Input
                     placeholder="Search tokens, spenders..."
                     value={searchQuery}

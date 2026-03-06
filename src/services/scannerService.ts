@@ -41,7 +41,8 @@ function decodeApprovedEvent(data: Uint8Array): DecodedApprovedEvent {
     return { owner, spender, amount };
 }
 
-const BATCH_SIZE = 5;
+/** Number of blocks fetched per single RPC call via getBlocks(). */
+const BATCH_SIZE = 50;
 
 export class BlockScanner {
     #cancelled = false;
@@ -69,9 +70,24 @@ export class BlockScanner {
 
                 const endBlock: number = Math.min(blockNum + BATCH_SIZE - 1, latestBlock);
 
+                // Build array of block numbers for batch RPC call
+                const blockTags: bigint[] = [];
                 for (let b = blockNum; b <= endBlock; b++) {
+                    blockTags.push(BigInt(b));
+                }
+
+                let blocks: Block[];
+                try {
+                    blocks = await this.#provider.getBlocks(blockTags, true);
+                } catch {
+                    // If batch fetch fails, skip this batch
+                    callbacks.onProgress(endBlock, latestBlock);
+                    continue;
+                }
+
+                for (const block of blocks) {
                     if (this.#cancelled) break;
-                    await this.#processBlock(b, callbacks);
+                    this.#processBlockData(block, callbacks);
                 }
 
                 callbacks.onProgress(endBlock, latestBlock);
@@ -95,25 +111,15 @@ export class BlockScanner {
         this.#cancelled = true;
     }
 
-    async #processBlock(
-        blockNumber: number,
-        callbacks: ScanCallbacks,
-    ): Promise<void> {
-        let block: Block;
-        try {
-            block = await this.#provider.getBlock(BigInt(blockNumber), true);
-        } catch {
-            // Skip blocks we cannot fetch
-            return;
-        }
-
+    #processBlockData(block: Block, callbacks: ScanCallbacks): void {
         const txs = block.transactions;
         if (!txs || txs.length === 0) return;
+
+        const blockNumber: number = Number(block.height);
 
         for (const tx of txs) {
             if (this.#cancelled) return;
 
-            // TransactionBase extends TransactionReceipt, so events are already present
             const events: ContractEvents = tx.events;
             if (!events) continue;
 

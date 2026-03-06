@@ -28,7 +28,7 @@ function HistoryRow({ entry, approval }: HistoryRowProps): ReactElement {
             : shortenAddress(entry.tokenAddress);
 
     return (
-        <div className="flex items-start gap-3 rounded-lg border border-zinc-800 bg-zinc-900/40 p-3">
+        <div className="flex items-start gap-3 rounded-lg border border-border bg-card p-3">
             {/* Direction indicator */}
             <div
                 className={`mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full ${
@@ -47,7 +47,7 @@ function HistoryRow({ entry, approval }: HistoryRowProps): ReactElement {
             {/* Details */}
             <div className="min-w-0 flex-1 space-y-1">
                 <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-zinc-200">
+                    <span className="text-sm font-medium text-foreground">
                         {tokenLabel}
                     </span>
                     <span
@@ -59,13 +59,13 @@ function HistoryRow({ entry, approval }: HistoryRowProps): ReactElement {
                     </span>
                 </div>
 
-                <div className="text-xs text-zinc-400">
+                <div className="text-xs text-muted-foreground">
                     <AllowanceLabel value={entry.previousAllowance} approval={approval} />
-                    <span className="mx-1 text-zinc-600">{'->'}</span>
+                    <span className="mx-1 text-muted-foreground/60">{'->'}</span>
                     <AllowanceLabel value={entry.newAllowance} approval={approval} />
                 </div>
 
-                <div className="flex items-center gap-3 text-xs text-zinc-500">
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">
                         <Clock className="size-3" />
                         Block {entry.blockNumber.toLocaleString()}
@@ -102,8 +102,8 @@ export function HistoryTimeline(): ReactElement {
 
     if (sorted.length === 0) {
         return (
-            <div className="flex flex-col items-center justify-center py-16 text-zinc-500">
-                <Clock className="mb-3 size-10 text-zinc-600" />
+            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                <Clock className="mb-3 size-10 text-muted-foreground/60" />
                 <p className="text-sm">No approval history yet.</p>
                 <p className="text-xs">
                     Run a scan to discover approval changes.

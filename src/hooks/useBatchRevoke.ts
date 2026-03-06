@@ -2,11 +2,9 @@ import { useState, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import type { Approval, BatchRevokeItem } from '../types/approval';
 import { revokeApproval } from '../services/approvalService';
-import { isFeeRequired, recordRevokeUsage } from '../services/feeService';
 import { removeCachedApproval } from '../services/cacheService';
 import { useApprovalStore } from '../stores/approvalStore';
 import { useWallet } from './useWallet';
-import { useFeeRevisionStore } from './useDevFee';
 
 export interface BatchRevokeState {
     items: BatchRevokeItem[];
@@ -85,19 +83,15 @@ export function useBatchRevoke(): UseBatchRevokeReturn {
             });
 
             try {
-                const devFeeRequired = isFeeRequired(walletAddress);
-
                 const txHash = await revokeApproval(
                     networkId,
                     address,
                     approval.tokenAddress,
                     approval.spenderAddress,
                     approval.allowance,
-                    devFeeRequired,
+                    true,
                 );
 
-                recordRevokeUsage(walletAddress);
-                useFeeRevisionStore.getState().bump();
                 removeApproval(approval.id);
                 void removeCachedApproval(approval.id);
 

@@ -14,6 +14,7 @@ import { RiskBadge } from './RiskBadge';
 import type { Approval } from '../types/approval';
 import { formatAllowance, shortenAddress, formatSats } from '../lib/formatters';
 import { calculateRiskScore } from '../lib/riskScoring';
+import { DEV_FEE_SATS } from '../config/constants';
 import { Loader2, AlertTriangle } from 'lucide-react';
 
 interface EditModalProps {
@@ -22,8 +23,6 @@ interface EditModalProps {
     readonly onCancel: () => void;
     readonly isLoading: boolean;
     readonly error: string | null;
-    readonly feeRequired: boolean;
-    readonly feeSats: bigint;
 }
 
 export function EditModal({
@@ -32,8 +31,6 @@ export function EditModal({
     onCancel,
     isLoading,
     error,
-    feeRequired,
-    feeSats,
 }: EditModalProps): ReactElement {
     const isOpen = approval !== null;
     const [inputValue, setInputValue] = useState('');
@@ -82,29 +79,29 @@ export function EditModal({
 
                 {approval ? (
                     <div className="space-y-4">
-                        <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4 space-y-3">
+                        <div className="rounded-lg border border-border bg-muted/50 p-4 space-y-3">
                             <div className="flex items-center justify-between">
-                                <span className="text-sm text-zinc-400">Token</span>
-                                <span className="font-medium text-zinc-100">
+                                <span className="text-sm text-muted-foreground">Token</span>
+                                <span className="font-medium text-foreground">
                                     {approval.tokenName} ({approval.tokenSymbol})
                                 </span>
                             </div>
                             <div className="flex items-center justify-between">
-                                <span className="text-sm text-zinc-400">Spender</span>
-                                <span className="font-medium text-zinc-100">
+                                <span className="text-sm text-muted-foreground">Spender</span>
+                                <span className="font-medium text-foreground">
                                     {approval.spenderLabel ?? shortenAddress(approval.spenderAddress)}
                                 </span>
                             </div>
                             <div className="flex items-center justify-between">
-                                <span className="text-sm text-zinc-400">Current Allowance</span>
-                                <span className="font-medium text-zinc-100">
+                                <span className="text-sm text-muted-foreground">Current Allowance</span>
+                                <span className="font-medium text-foreground">
                                     {formatAllowance(approval.allowance, approval.tokenDecimals)}
                                 </span>
                             </div>
                         </div>
 
                         <div className="space-y-2">
-                            <label htmlFor="new-allowance" className="text-sm font-medium text-zinc-300">
+                            <label htmlFor="new-allowance" className="text-sm font-medium text-foreground">
                                 New Allowance
                             </label>
                             <Input
@@ -123,20 +120,16 @@ export function EditModal({
 
                         {previewRisk ? (
                             <div className="flex items-center gap-2">
-                                <span className="text-sm text-zinc-400">New risk level:</span>
+                                <span className="text-sm text-muted-foreground">New risk level:</span>
                                 <RiskBadge level={previewRisk} />
                             </div>
                         ) : null}
 
-                        <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3">
-                            {feeRequired ? (
-                                <div className="flex items-center gap-2 text-sm text-amber-400">
-                                    <AlertTriangle className="size-4 shrink-0" />
-                                    <span>This will cost {formatSats(feeSats)}</span>
-                                </div>
-                            ) : (
-                                <p className="text-sm text-green-400">Free action</p>
-                            )}
+                        <div className="rounded-lg border border-border bg-muted/50 p-3">
+                            <div className="flex items-center gap-2 text-sm text-amber-400">
+                                <AlertTriangle className="size-4 shrink-0" />
+                                <span>Fee: {formatSats(DEV_FEE_SATS)}</span>
+                            </div>
                         </div>
 
                         {error ? (

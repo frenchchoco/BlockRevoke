@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { RiskBadge } from './RiskBadge';
 import type { Approval } from '../types/approval';
 import { formatAllowance, shortenAddress, formatSats } from '../lib/formatters';
+import { DEV_FEE_SATS } from '../config/constants';
 import { Loader2, AlertTriangle } from 'lucide-react';
 
 interface RevokeConfirmDialogProps {
@@ -19,9 +20,6 @@ interface RevokeConfirmDialogProps {
     readonly onCancel: () => void;
     readonly isLoading: boolean;
     readonly error: string | null;
-    readonly feeRequired: boolean;
-    readonly freeRemaining: number;
-    readonly feeSats: bigint;
 }
 
 export function RevokeConfirmDialog({
@@ -30,9 +28,6 @@ export function RevokeConfirmDialog({
     onCancel,
     isLoading,
     error,
-    feeRequired,
-    freeRemaining,
-    feeSats,
 }: RevokeConfirmDialogProps): ReactElement {
     const isOpen = approval !== null;
 
@@ -48,42 +43,36 @@ export function RevokeConfirmDialog({
 
                 {approval ? (
                     <div className="space-y-4">
-                        <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4 space-y-3">
+                        <div className="rounded-lg border border-border bg-muted/50 p-4 space-y-3">
                             <div className="flex items-center justify-between">
-                                <span className="text-sm text-zinc-400">Token</span>
-                                <span className="font-medium text-zinc-100">
+                                <span className="text-sm text-muted-foreground">Token</span>
+                                <span className="font-medium text-foreground">
                                     {approval.tokenName} ({approval.tokenSymbol})
                                 </span>
                             </div>
                             <div className="flex items-center justify-between">
-                                <span className="text-sm text-zinc-400">Spender</span>
-                                <span className="font-medium text-zinc-100">
+                                <span className="text-sm text-muted-foreground">Spender</span>
+                                <span className="font-medium text-foreground">
                                     {approval.spenderLabel ?? shortenAddress(approval.spenderAddress)}
                                 </span>
                             </div>
                             <div className="flex items-center justify-between">
-                                <span className="text-sm text-zinc-400">Current Allowance</span>
-                                <span className="font-medium text-zinc-100">
+                                <span className="text-sm text-muted-foreground">Current Allowance</span>
+                                <span className="font-medium text-foreground">
                                     {formatAllowance(approval.allowance, approval.tokenDecimals)}
                                 </span>
                             </div>
                             <div className="flex items-center justify-between">
-                                <span className="text-sm text-zinc-400">Risk Level</span>
+                                <span className="text-sm text-muted-foreground">Risk Level</span>
                                 <RiskBadge level={approval.riskScore} />
                             </div>
                         </div>
 
-                        <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3">
-                            {feeRequired ? (
-                                <div className="flex items-center gap-2 text-sm text-amber-400">
-                                    <AlertTriangle className="size-4 shrink-0" />
-                                    <span>This will cost {formatSats(feeSats)}</span>
-                                </div>
-                            ) : (
-                                <p className="text-sm text-green-400">
-                                    Free ({freeRemaining}/3 remaining)
-                                </p>
-                            )}
+                        <div className="rounded-lg border border-border bg-muted/50 p-3">
+                            <div className="flex items-center gap-2 text-sm text-amber-400">
+                                <AlertTriangle className="size-4 shrink-0" />
+                                <span>Fee: {formatSats(DEV_FEE_SATS)}</span>
+                            </div>
                         </div>
 
                         {error ? (

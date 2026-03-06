@@ -1,5 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { ThemeProvider } from 'next-themes';
 import { WalletConnectProvider } from '@btc-vision/walletconnect';
 import App from './App';
 import { Toaster } from './components/Toaster';
@@ -10,9 +11,11 @@ if (!rootEl) throw new Error('Root element not found');
 
 createRoot(rootEl).render(
     <StrictMode>
-        <WalletConnectProvider theme="dark">
-            <App />
-            <Toaster />
-        </WalletConnectProvider>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+            <WalletConnectProvider>
+                <App />
+                <Toaster />
+            </WalletConnectProvider>
+        </ThemeProvider>
     </StrictMode>,
 );

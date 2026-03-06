@@ -17,6 +17,7 @@ import { fetchTokenMeta } from '../services/tokenService';
 import { KNOWN_SPENDERS } from '../config/knownSpenders';
 import { UNLIMITED_THRESHOLD } from '../config/constants';
 import { calculateRiskScore } from '../lib/riskScoring';
+import { NETWORK_CONFIGS } from '../config/networks';
 import type { Approval, ApprovalHistory } from '../types/approval';
 
 interface UseScanReturn {
@@ -59,9 +60,10 @@ export function useScan(): UseScanReturn {
 
         void (async (): Promise<void> => {
             try {
-                const start = await getLastScannedBlock(net, walletAddress);
-                // Start from the next block after the last scanned one, or 0 if never scanned
-                const fromBlock = start > 0 ? start + 1 : 0;
+                const lastScanned = await getLastScannedBlock(net, walletAddress);
+                const genesisBlock = NETWORK_CONFIGS[net].startBlock;
+                // Resume from last scanned + 1, or network genesis if never scanned
+                const fromBlock = lastScanned > 0 ? lastScanned + 1 : genesisBlock;
 
                 const scanner = new BlockScanner(net, ownerHex);
                 scannerRef.current = scanner;

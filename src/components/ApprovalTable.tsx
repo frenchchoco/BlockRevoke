@@ -110,8 +110,8 @@ export function ApprovalTable({
                         <button
                             type="button"
                             className={cn(
-                                'flex items-center gap-1 hover:text-zinc-100 transition-colors',
-                                sortField === 'token' && 'text-zinc-100',
+                                'flex items-center gap-1 hover:text-foreground transition-colors',
+                                sortField === 'token' && 'text-foreground',
                             )}
                             onClick={(): void => handleSort('token')}
                         >
@@ -124,8 +124,8 @@ export function ApprovalTable({
                         <button
                             type="button"
                             className={cn(
-                                'flex items-center gap-1 hover:text-zinc-100 transition-colors',
-                                sortField === 'allowance' && 'text-zinc-100',
+                                'flex items-center gap-1 hover:text-foreground transition-colors',
+                                sortField === 'allowance' && 'text-foreground',
                             )}
                             onClick={(): void => handleSort('allowance')}
                         >
@@ -137,8 +137,8 @@ export function ApprovalTable({
                         <button
                             type="button"
                             className={cn(
-                                'flex items-center gap-1 hover:text-zinc-100 transition-colors',
-                                sortField === 'risk' && 'text-zinc-100',
+                                'flex items-center gap-1 hover:text-foreground transition-colors',
+                                sortField === 'risk' && 'text-foreground',
                             )}
                             onClick={(): void => handleSort('risk')}
                         >

@@ -28,7 +28,7 @@ export function DashboardSummary({ approvals }: DashboardSummaryProps): ReactEle
         }
 
         return [
-            { label: 'Total Approvals', count: approvals.length, colorClass: 'text-zinc-100' },
+            { label: 'Total Approvals', count: approvals.length, colorClass: 'text-foreground' },
             { label: 'Critical', count: counts.critical, colorClass: RISK_COLORS.critical },
             { label: 'High', count: counts.high, colorClass: RISK_COLORS.high },
             { label: 'Medium', count: counts.medium, colorClass: RISK_COLORS.medium },
@@ -39,9 +39,9 @@ export function DashboardSummary({ approvals }: DashboardSummaryProps): ReactEle
     return (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5 mb-6">
             {stats.map((stat) => (
-                <Card key={stat.label} className="bg-zinc-900 border-zinc-800">
+                <Card key={stat.label}>
                     <CardContent className="pt-0">
-                        <p className="text-xs text-zinc-500 mb-1">{stat.label}</p>
+                        <p className="text-xs text-muted-foreground mb-1">{stat.label}</p>
                         <p className={cn('text-2xl font-bold', stat.colorClass)}>{stat.count}</p>
                     </CardContent>
                 </Card>

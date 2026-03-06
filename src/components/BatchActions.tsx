@@ -4,6 +4,7 @@ import { Progress } from '@/components/ui/progress';
 import type { Approval, BatchRevokeItem } from '../types/approval';
 import type { BatchRevokeState } from '../hooks/useBatchRevoke';
 import { formatSats } from '../lib/formatters';
+import { DEV_FEE_SATS } from '../config/constants';
 import { Loader2, Check, X, Circle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -12,15 +13,12 @@ interface BatchActionsProps {
     readonly onExecute: () => void;
     readonly onCancel: () => void;
     readonly batchState: BatchRevokeState | null;
-    readonly feeRequired: boolean;
-    readonly freeRemaining: number;
-    readonly feeSats: bigint;
 }
 
 function StatusIcon({ status }: { readonly status: BatchRevokeItem['status'] }): ReactElement {
     switch (status) {
         case 'pending':
-            return <Circle className="size-4 text-zinc-500" />;
+            return <Circle className="size-4 text-muted-foreground" />;
         case 'signing':
             return <Loader2 className="size-4 text-blue-400 animate-spin" />;
         case 'success':
@@ -48,9 +46,6 @@ export function BatchActions({
     onExecute,
     onCancel,
     batchState,
-    feeRequired,
-    freeRemaining,
-    feeSats,
 }: BatchActionsProps): ReactElement {
     const count = selectedApprovals.length;
 
@@ -59,10 +54,7 @@ export function BatchActions({
     }
 
     const isRunning = batchState?.isRunning === true;
-
-    // Calculate fee summary
-    const freeCount = Math.min(count, freeRemaining);
-    const paidCount = Math.max(0, count - freeRemaining);
+    const totalFee = DEV_FEE_SATS * BigInt(count);
 
     if (isRunning && batchState) {
         const progressPercent = batchState.totalCount > 0
@@ -72,15 +64,15 @@ export function BatchActions({
         const currentItem = batchState.items.find((item) => item.status === 'signing');
 
         return (
-            <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-zinc-800 bg-zinc-950/95 backdrop-blur-sm">
+            <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/95 backdrop-blur-sm">
                 <div className="container mx-auto max-w-6xl px-4 py-4 space-y-3">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <span className="text-sm font-medium text-zinc-100">
+                            <span className="text-sm font-medium text-foreground">
                                 Progress: {batchState.completedCount}/{batchState.totalCount}
                             </span>
                             {currentItem ? (
-                                <span className="text-sm text-zinc-400">
+                                <span className="text-sm text-muted-foreground">
                                     Current: {getStatusLabel(currentItem.status)}
                                 </span>
                             ) : null}
@@ -101,7 +93,7 @@ export function BatchActions({
                                     item.status === 'success' && 'border-green-500/20 bg-green-500/10 text-green-400',
                                     item.status === 'failed' && 'border-red-500/20 bg-red-500/10 text-red-400',
                                     item.status === 'signing' && 'border-blue-500/20 bg-blue-500/10 text-blue-400',
-                                    item.status === 'pending' && 'border-zinc-700 bg-zinc-900 text-zinc-500',
+                                    item.status === 'pending' && 'border-border bg-muted text-muted-foreground',
                                 )}
                             >
                                 <StatusIcon status={item.status} />
@@ -117,23 +109,15 @@ export function BatchActions({
     }
 
     return (
-        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-zinc-800 bg-zinc-950/95 backdrop-blur-sm">
+        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/95 backdrop-blur-sm">
             <div className="container mx-auto max-w-6xl px-4 py-4">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <span className="text-sm font-medium text-zinc-100">
+                        <span className="text-sm font-medium text-foreground">
                             {count} approval{count !== 1 ? 's' : ''} selected
                         </span>
-                        <span className="text-sm text-zinc-400">
-                            {feeRequired || paidCount > 0 ? (
-                                <>
-                                    {freeCount > 0 ? `${freeCount} free` : null}
-                                    {freeCount > 0 && paidCount > 0 ? ' + ' : null}
-                                    {paidCount > 0 ? `${paidCount} x ${formatSats(feeSats)}` : null}
-                                </>
-                            ) : (
-                                `Free (${Math.max(0, freeRemaining - count)} remaining after)`
-                            )}
+                        <span className="text-sm text-muted-foreground">
+                            Total fee: {formatSats(totalFee)}
                         </span>
                     </div>
                     <Button

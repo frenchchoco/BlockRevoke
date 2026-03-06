@@ -12,7 +12,6 @@ import { HistoryTimeline } from './components/HistoryTimeline';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
 import { useApprovals } from './hooks/useApprovals';
 import { useWallet } from './hooks/useWallet';
-import { useDevFee } from './hooks/useDevFee';
 import { useRevokeAction } from './hooks/useRevokeAction';
 import { useEditAction } from './hooks/useEditAction';
 import { useBatchRevoke } from './hooks/useBatchRevoke';
@@ -21,7 +20,6 @@ import type { Approval } from './types/approval';
 export default function App(): ReactElement {
     const { approvals, isLoading } = useApprovals();
     const { isReady } = useWallet();
-    const { freeRemaining, feeRequired, feeSats } = useDevFee();
 
     const [filteredApprovals, setFilteredApprovals] = useState<Approval[]>([]);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -105,7 +103,7 @@ export default function App(): ReactElement {
     }, [cancelBatch]);
 
     return (
-        <div className="min-h-screen flex flex-col bg-zinc-950 text-zinc-100">
+        <div className="min-h-screen flex flex-col bg-background text-foreground">
             <Header />
             <main className="flex-1 container mx-auto px-4 py-6 max-w-6xl">
                 {isReady ? <ScanProgress /> : null}
@@ -144,9 +142,6 @@ export default function App(): ReactElement {
                 onCancel={cancelRevoke}
                 isLoading={revokeLoading}
                 error={revokeError}
-                feeRequired={feeRequired}
-                freeRemaining={freeRemaining}
-                feeSats={feeSats}
             />
 
             <EditModal
@@ -155,8 +150,6 @@ export default function App(): ReactElement {
                 onCancel={cancelEdit}
                 isLoading={editLoading}
                 error={editError}
-                feeRequired={feeRequired}
-                feeSats={feeSats}
             />
 
             {selectedIds.size > 0 ? (
@@ -165,9 +158,6 @@ export default function App(): ReactElement {
                     onExecute={handleBatchExecute}
                     onCancel={handleBatchCancel}
                     batchState={batchState}
-                    feeRequired={feeRequired}
-                    freeRemaining={freeRemaining}
-                    feeSats={feeSats}
                 />
             ) : null}
         </div>

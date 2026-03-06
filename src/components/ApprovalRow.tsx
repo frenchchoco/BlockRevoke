@@ -31,10 +31,10 @@ export function ApprovalRow({
             </TableCell>
             <TableCell>
                 <div className="flex flex-col">
-                    <span className="font-medium text-zinc-100">
+                    <span className="font-medium text-foreground">
                         {approval.tokenName} ({approval.tokenSymbol})
                     </span>
-                    <span className="text-xs text-zinc-500">
+                    <span className="text-xs text-muted-foreground">
                         {shortenAddress(approval.tokenAddress)}
                     </span>
                 </div>
@@ -42,15 +42,15 @@ export function ApprovalRow({
             <TableCell>
                 <div className="flex flex-col">
                     {approval.spenderLabel ? (
-                        <span className="font-medium text-zinc-100">{approval.spenderLabel}</span>
+                        <span className="font-medium text-foreground">{approval.spenderLabel}</span>
                     ) : null}
-                    <span className="text-xs text-zinc-500">
+                    <span className="text-xs text-muted-foreground">
                         {shortenAddress(approval.spenderAddress)}
                     </span>
                 </div>
             </TableCell>
             <TableCell>
-                <span className={approval.isUnlimited ? 'text-red-400 font-medium' : ''}>
+                <span className={approval.isUnlimited ? 'text-red-500 font-medium' : ''}>
                     {formatAllowance(approval.allowance, approval.tokenDecimals)}
                 </span>
             </TableCell>

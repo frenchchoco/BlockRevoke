@@ -19,17 +19,13 @@ export function ScanProgress(): ReactElement {
     // Never scanned and not scanning
     if (!isScanning && lastScannedBlock === 0 && currentBlock === 0) {
         return (
-            <Card className="mb-4 border-zinc-800 bg-zinc-900/50">
+            <Card className="mb-4">
                 <CardContent className="flex items-center justify-between py-3">
-                    <div className="flex items-center gap-2 text-sm text-zinc-400">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Search className="size-4" />
                         <span>Start scanning to discover all approvals</span>
                     </div>
-                    <Button
-                        size="sm"
-                        variant="default"
-                        onClick={startScan}
-                    >
+                    <Button size="sm" onClick={startScan}>
                         <Play className="mr-1 size-3" />
                         Scan
                     </Button>
@@ -41,18 +37,14 @@ export function ScanProgress(): ReactElement {
     // Scanning in progress
     if (isScanning) {
         return (
-            <Card className="mb-4 border-zinc-800 bg-zinc-900/50">
+            <Card className="mb-4">
                 <CardContent className="space-y-2 py-3">
                     <div className="flex items-center justify-between">
-                        <span className="text-sm text-zinc-300">
+                        <span className="text-sm text-foreground">
                             Scanning block {currentBlock.toLocaleString()} /{' '}
                             {latestBlock.toLocaleString()} ({progress}%)
                         </span>
-                        <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={stopScan}
-                        >
+                        <Button size="sm" variant="destructive" onClick={stopScan}>
                             <Square className="mr-1 size-3" />
                             Stop
                         </Button>
@@ -65,9 +57,9 @@ export function ScanProgress(): ReactElement {
 
     // Scan complete
     return (
-        <Card className="mb-4 border-zinc-800 bg-zinc-900/50">
+        <Card className="mb-4">
             <CardContent className="flex items-center justify-between py-3">
-                <span className="text-sm text-zinc-400">
+                <span className="text-sm text-muted-foreground">
                     Scan complete. Last scanned block:{' '}
                     {lastScannedBlock.toLocaleString()}
                 </span>

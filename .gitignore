@@ -34,3 +34,4 @@ src/**/*.d.ts.map
 *.njsproj
 *.sln
 *.sw?
+.vercel
