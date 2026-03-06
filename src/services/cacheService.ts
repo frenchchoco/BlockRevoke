@@ -65,26 +65,26 @@ function getDB(): Promise<IDBPDatabase<BlockRevokeDB>> {
     if (!dbPromise) {
         dbPromise = openDB<BlockRevokeDB>(DB_NAME, DB_VERSION, {
             upgrade(db): void {
-                // scan-progress store
                 if (!db.objectStoreNames.contains('scan-progress')) {
                     db.createObjectStore('scan-progress');
                 }
-
-                // approvals store
                 if (!db.objectStoreNames.contains('approvals')) {
                     db.createObjectStore('approvals');
                 }
-
-                // history store with auto-increment key
                 if (!db.objectStoreNames.contains('history')) {
                     db.createObjectStore('history', { autoIncrement: true });
                 }
-
-                // factory-tokens store (added in v2)
                 if (!db.objectStoreNames.contains('factory-tokens')) {
                     db.createObjectStore('factory-tokens');
                 }
             },
+        }).then((db) => {
+            // Reset the cached promise when the connection closes unexpectedly
+            // so the next call to getDB() opens a fresh connection.
+            db.addEventListener('close', () => {
+                dbPromise = null;
+            });
+            return db;
         });
     }
     return dbPromise;
