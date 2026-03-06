@@ -1,4 +1,4 @@
-export const DEV_FEE_SATS = 3000n;
+export const DEV_FEE_SATS = 1100n;
 
 const ENV_DEV_ADDRESS: string | undefined = import.meta.env.VITE_DEV_ADDRESS as
     | string

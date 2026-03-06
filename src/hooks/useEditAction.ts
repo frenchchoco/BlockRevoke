@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import type { Approval } from '../types/approval';
 import { editAllowance } from '../services/approvalService';
 import { useApprovalStore } from '../stores/approvalStore';
+import { usePendingActionsStore } from '../stores/pendingActionsStore';
 import { useWallet } from './useWallet';
 import { calculateRiskScore } from '../lib/riskScoring';
 import { UNLIMITED_THRESHOLD } from '../config/constants';
@@ -13,7 +14,7 @@ interface UseEditActionReturn {
     isLoading: boolean;
     error: string | null;
     startEdit: (approval: Approval) => void;
-    confirmEdit: (newAllowance: bigint) => Promise<void>;
+    confirmEdit: (newAllowance: bigint, feeRate?: number) => Promise<void>;
     cancelEdit: () => void;
 }
 
@@ -24,6 +25,8 @@ export function useEditAction(): UseEditActionReturn {
 
     const { walletAddress, address, networkId } = useWallet();
     const updateAllowance = useApprovalStore((s) => s.updateAllowance);
+    const setPending = usePendingActionsStore((s) => s.setPending);
+    const clearPending = usePendingActionsStore((s) => s.clearPending);
 
     const isModalOpen = targetApproval !== null;
 
@@ -38,11 +41,12 @@ export function useEditAction(): UseEditActionReturn {
     }, []);
 
     const confirmEdit = useCallback(
-        async (newAllowance: bigint): Promise<void> => {
+        async (newAllowance: bigint, feeRate?: number): Promise<void> => {
             if (!targetApproval || !walletAddress || !address) return;
 
             setIsLoading(true);
             setError(null);
+            setPending(targetApproval.id, 'editing');
 
             try {
                 await editAllowance(
@@ -53,8 +57,10 @@ export function useEditAction(): UseEditActionReturn {
                     targetApproval.allowance,
                     newAllowance,
                     true,
+                    feeRate,
                 );
 
+                clearPending(targetApproval.id);
                 const isKnown = targetApproval.spenderLabel !== null;
                 const newRiskScore = calculateRiskScore(newAllowance, 0n, isKnown);
                 const isUnlimited = newAllowance >= UNLIMITED_THRESHOLD;
@@ -63,6 +69,7 @@ export function useEditAction(): UseEditActionReturn {
                 setTargetApproval(null);
                 toast.success('Allowance updated');
             } catch (err: unknown) {
+                clearPending(targetApproval.id);
                 const msg = err instanceof Error ? err.message : String(err);
                 setError(msg);
                 toast.error('Edit failed', { description: msg });

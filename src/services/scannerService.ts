@@ -41,13 +41,32 @@ function decodeApprovedEvent(data: Uint8Array): DecodedApprovedEvent {
     return { owner, spender, amount };
 }
 
-/** Number of blocks fetched per single RPC call via getBlocks(). */
-const BATCH_SIZE = 50;
+/* ── Turbo Tuning ──────────────────────────────────────────── */
+
+/**
+ * Initial blocks per single RPC call.
+ * Adaptive: will halve on repeated failures.
+ */
+const INITIAL_BATCH_SIZE = 200;
+
+/** Minimum batch size before giving up on a range. */
+const MIN_BATCH_SIZE = 25;
+
+/** Number of concurrent batch fetches. */
+const CONCURRENCY = 10;
+
+/** Max retries per failed batch before reducing size. */
+const MAX_RETRIES = 3;
+
+function delay(ms: number): Promise<void> {
+    return new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
 
 export class BlockScanner {
     #cancelled = false;
     readonly #provider: JSONRpcProvider;
     readonly #ownerHex: string;
+    #currentBatchSize: number = INITIAL_BATCH_SIZE;
 
     constructor(networkId: NetworkId, ownerAddress: string) {
         this.#provider = getReadProvider(networkId);
@@ -56,46 +75,49 @@ export class BlockScanner {
 
     async scan(startBlock: number, callbacks: ScanCallbacks): Promise<void> {
         this.#cancelled = false;
+        this.#currentBatchSize = INITIAL_BATCH_SIZE;
 
         try {
             const latestBlockBig: bigint = await this.#provider.getBlockNumber();
             const latestBlock: number = Number(latestBlockBig);
+            const totalBlocks = latestBlock - startBlock + 1;
 
-            for (
-                let blockNum = startBlock;
-                blockNum <= latestBlock;
-                blockNum += BATCH_SIZE
-            ) {
+            console.log(
+                `[BlockRevoke] Turbo scan: ${totalBlocks} blocks (${startBlock}..${latestBlock}), batch=${this.#currentBatchSize}, concurrency=${CONCURRENCY}`,
+            );
+
+            // Build all batch ranges upfront (adaptive size)
+            const batches = this.#buildBatches(startBlock, latestBlock);
+
+            // Process batches with concurrency pool
+            let highestCompleted = startBlock;
+
+            for (let i = 0; i < batches.length; i += CONCURRENCY) {
                 if (this.#cancelled) break;
 
-                const endBlock: number = Math.min(blockNum + BATCH_SIZE - 1, latestBlock);
+                const chunk = batches.slice(i, i + CONCURRENCY);
 
-                // Build array of block numbers for batch RPC call
-                const blockTags: bigint[] = [];
-                for (let b = blockNum; b <= endBlock; b++) {
-                    blockTags.push(BigInt(b));
-                }
+                const results = await Promise.allSettled(
+                    chunk.map((batch) => this.#fetchBatchAdaptive(batch.from, batch.to)),
+                );
 
-                let blocks: Block[];
-                try {
-                    blocks = await this.#provider.getBlocks(blockTags, true);
-                } catch {
-                    // If batch fetch fails, skip this batch
-                    callbacks.onProgress(endBlock, latestBlock);
-                    continue;
-                }
-
-                for (const block of blocks) {
+                // Process results in order
+                for (let j = 0; j < results.length; j++) {
                     if (this.#cancelled) break;
-                    this.#processBlockData(block, callbacks);
+                    const result = results[j] as PromiseSettledResult<Block[] | null>;
+                    const batch = chunk[j] as { from: number; to: number };
+
+                    if (result.status === 'fulfilled' && result.value) {
+                        for (const block of result.value) {
+                            if (this.#cancelled) break;
+                            this.#processBlockData(block, callbacks);
+                        }
+                    }
+
+                    highestCompleted = batch.to;
                 }
 
-                callbacks.onProgress(endBlock, latestBlock);
-
-                // Yield to UI thread between batches
-                await new Promise<void>((resolve) => {
-                    setTimeout(resolve, 0);
-                });
+                callbacks.onProgress(highestCompleted, latestBlock);
             }
 
             if (!this.#cancelled) {
@@ -109,6 +131,63 @@ export class BlockScanner {
 
     stop(): void {
         this.#cancelled = true;
+    }
+
+    #buildBatches(startBlock: number, latestBlock: number): Array<{ from: number; to: number }> {
+        const batches: Array<{ from: number; to: number }> = [];
+        const size = this.#currentBatchSize;
+        for (let b = startBlock; b <= latestBlock; b += size) {
+            batches.push({ from: b, to: Math.min(b + size - 1, latestBlock) });
+        }
+        return batches;
+    }
+
+    /**
+     * Fetch a batch of blocks with adaptive sizing.
+     * On failure, halves the batch and retries the sub-ranges.
+     */
+    async #fetchBatchAdaptive(from: number, to: number): Promise<Block[] | null> {
+        const blockTags: bigint[] = [];
+        for (let b = from; b <= to; b++) {
+            blockTags.push(BigInt(b));
+        }
+
+        for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+            try {
+                return await this.#provider.getBlocks(blockTags, true);
+            } catch (err: unknown) {
+                const msg = err instanceof Error ? err.message : String(err);
+                console.warn(
+                    `[BlockRevoke] getBlocks ${from}-${to} (${blockTags.length} blocks) attempt ${attempt + 1} failed: ${msg}`,
+                );
+
+                if (attempt < MAX_RETRIES - 1) {
+                    await delay(200 * (attempt + 1));
+                }
+            }
+        }
+
+        // All retries failed — try splitting into smaller sub-batches
+        const rangeSize = to - from + 1;
+        if (rangeSize > MIN_BATCH_SIZE) {
+            const mid = from + Math.floor(rangeSize / 2);
+            console.log(`[BlockRevoke] Splitting failed range ${from}-${to} into ${from}-${mid - 1} and ${mid}-${to}`);
+
+            // Reduce global batch size for future batches
+            this.#currentBatchSize = Math.max(MIN_BATCH_SIZE, Math.floor(this.#currentBatchSize / 2));
+
+            const [left, right] = await Promise.all([
+                this.#fetchBatchAdaptive(from, mid - 1),
+                this.#fetchBatchAdaptive(mid, to),
+            ]);
+
+            const combined: Block[] = [];
+            if (left) combined.push(...left);
+            if (right) combined.push(...right);
+            return combined.length > 0 ? combined : null;
+        }
+
+        return null;
     }
 
     #processBlockData(block: Block, callbacks: ScanCallbacks): void {
@@ -153,8 +232,10 @@ export class BlockScanner {
                         blockNumber,
                         txHash,
                     });
-                } catch {
-                    // If decoding fails, skip this event
+                } catch (err: unknown) {
+                    console.warn(
+                        `[BlockRevoke] Failed to decode Approved event at block ${blockNumber}: ${err instanceof Error ? err.message : String(err)}`,
+                    );
                 }
             }
         }

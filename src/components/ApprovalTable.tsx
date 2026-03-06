@@ -1,4 +1,5 @@
 import { type ReactElement, useState, useMemo, useCallback } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import {
     Table,
     TableBody,
@@ -100,67 +101,72 @@ export function ApprovalTable({
     const allSelected = approvals.length > 0 && selectedIds.size === approvals.length;
 
     return (
-        <Table>
-            <TableHeader>
-                <TableRow>
-                    <TableHead className="w-[40px]">
-                        <Checkbox checked={allSelected} onCheckedChange={onSelectAll} />
-                    </TableHead>
-                    <TableHead>
-                        <button
-                            type="button"
-                            className={cn(
-                                'flex items-center gap-1 hover:text-foreground transition-colors',
-                                sortField === 'token' && 'text-foreground',
-                            )}
-                            onClick={(): void => handleSort('token')}
-                        >
-                            Token
-                            <ArrowUpDown className="size-3" />
-                        </button>
-                    </TableHead>
-                    <TableHead>Spender</TableHead>
-                    <TableHead>
-                        <button
-                            type="button"
-                            className={cn(
-                                'flex items-center gap-1 hover:text-foreground transition-colors',
-                                sortField === 'allowance' && 'text-foreground',
-                            )}
-                            onClick={(): void => handleSort('allowance')}
-                        >
-                            Allowance
-                            <ArrowUpDown className="size-3" />
-                        </button>
-                    </TableHead>
-                    <TableHead>
-                        <button
-                            type="button"
-                            className={cn(
-                                'flex items-center gap-1 hover:text-foreground transition-colors',
-                                sortField === 'risk' && 'text-foreground',
-                            )}
-                            onClick={(): void => handleSort('risk')}
-                        >
-                            Risk
-                            <ArrowUpDown className="size-3" />
-                        </button>
-                    </TableHead>
-                    <TableHead>Actions</TableHead>
-                </TableRow>
-            </TableHeader>
-            <TableBody>
-                {sortedApprovals.map((approval) => (
-                    <ApprovalRow
-                        key={approval.id}
-                        approval={approval}
-                        isSelected={selectedIds.has(approval.id)}
-                        onSelectToggle={onSelectToggle}
-                        onRevoke={onRevoke}
-                        onEdit={onEdit}
-                    />
-                ))}
-            </TableBody>
-        </Table>
+        <div className="surface-elevated overflow-hidden">
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead className="w-[40px]">
+                            <Checkbox checked={allSelected} onCheckedChange={onSelectAll} />
+                        </TableHead>
+                        <TableHead>
+                            <button
+                                type="button"
+                                className={cn(
+                                    'flex items-center gap-1 hover:text-foreground transition-colors',
+                                    sortField === 'token' && 'text-foreground',
+                                )}
+                                onClick={(): void => handleSort('token')}
+                            >
+                                Token
+                                <ArrowUpDown className="size-3" />
+                            </button>
+                        </TableHead>
+                        <TableHead>Spender</TableHead>
+                        <TableHead>
+                            <button
+                                type="button"
+                                className={cn(
+                                    'flex items-center gap-1 hover:text-foreground transition-colors',
+                                    sortField === 'allowance' && 'text-foreground',
+                                )}
+                                onClick={(): void => handleSort('allowance')}
+                            >
+                                Allowance
+                                <ArrowUpDown className="size-3" />
+                            </button>
+                        </TableHead>
+                        <TableHead>
+                            <button
+                                type="button"
+                                className={cn(
+                                    'flex items-center gap-1 hover:text-foreground transition-colors',
+                                    sortField === 'risk' && 'text-foreground',
+                                )}
+                                onClick={(): void => handleSort('risk')}
+                            >
+                                Risk
+                                <ArrowUpDown className="size-3" />
+                            </button>
+                        </TableHead>
+                        <TableHead>Actions</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    <AnimatePresence mode="popLayout">
+                        {sortedApprovals.map((approval, index) => (
+                            <ApprovalRow
+                                key={approval.id}
+                                approval={approval}
+                                isSelected={selectedIds.has(approval.id)}
+                                onSelectToggle={onSelectToggle}
+                                onRevoke={onRevoke}
+                                onEdit={onEdit}
+                                index={index}
+                            />
+                        ))}
+                    </AnimatePresence>
+                </TableBody>
+            </Table>
+        </div>
     );
 }

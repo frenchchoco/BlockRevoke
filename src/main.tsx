@@ -11,7 +11,7 @@ if (!rootEl) throw new Error('Root element not found');
 
 createRoot(rootEl).render(
     <StrictMode>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
             <WalletConnectProvider>
                 <App />
                 <Toaster />

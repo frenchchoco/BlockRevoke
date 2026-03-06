@@ -20,6 +20,13 @@ export const useApprovalStore = create<ApprovalState>()((set) => ({
       const merged = [...state.approvals];
       for (const incoming of newApprovals) {
         const existingIndex = merged.findIndex((a) => a.id === incoming.id);
+        if (incoming.allowance === 0n) {
+          // Zero-allowance = revoked → remove instead of adding
+          if (existingIndex !== -1) {
+            merged.splice(existingIndex, 1);
+          }
+          continue;
+        }
         if (existingIndex !== -1) {
           merged[existingIndex] = incoming;
         } else {
@@ -43,11 +50,13 @@ export const useApprovalStore = create<ApprovalState>()((set) => ({
     riskScore: RiskLevel,
   ): void => {
     set((state) => ({
-      approvals: state.approvals.map((a) =>
-        a.id === id
-          ? { ...a, allowance: newAllowance, isUnlimited, riskScore }
-          : a,
-      ),
+      approvals: newAllowance === 0n
+        ? state.approvals.filter((a) => a.id !== id) // Remove if allowance set to 0
+        : state.approvals.map((a) =>
+            a.id === id
+              ? { ...a, allowance: newAllowance, isUnlimited, riskScore }
+              : a,
+          ),
     }));
   },
 

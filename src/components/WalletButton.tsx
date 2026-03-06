@@ -7,11 +7,11 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useWallet } from '../hooks/useWallet';
-import { shortenAddress } from '../lib/formatters';
+import { displayAddress } from '../lib/formatters';
 import { LogOut, Wallet } from 'lucide-react';
 
 export function WalletButton(): ReactElement {
-    const { walletAddress, openConnectModal, disconnect } = useWallet();
+    const { walletAddress, openConnectModal, disconnect, networkId } = useWallet();
 
     if (!walletAddress) {
         return (
@@ -27,7 +27,7 @@ export function WalletButton(): ReactElement {
             <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm">
                     <Wallet className="size-4" />
-                    {shortenAddress(walletAddress)}
+                    {displayAddress(walletAddress, networkId)}
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">

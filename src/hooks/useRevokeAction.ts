@@ -4,6 +4,7 @@ import type { Approval } from '../types/approval';
 import { revokeApproval } from '../services/approvalService';
 import { removeCachedApproval } from '../services/cacheService';
 import { useApprovalStore } from '../stores/approvalStore';
+import { usePendingActionsStore } from '../stores/pendingActionsStore';
 import { useWallet } from './useWallet';
 
 interface UseRevokeActionReturn {
@@ -12,7 +13,7 @@ interface UseRevokeActionReturn {
     isLoading: boolean;
     error: string | null;
     startRevoke: (approval: Approval) => void;
-    confirmRevoke: () => Promise<void>;
+    confirmRevoke: (feeRate?: number) => Promise<void>;
     cancelRevoke: () => void;
 }
 
@@ -23,6 +24,8 @@ export function useRevokeAction(): UseRevokeActionReturn {
 
     const { walletAddress, address, networkId } = useWallet();
     const removeApproval = useApprovalStore((s) => s.removeApproval);
+    const setPending = usePendingActionsStore((s) => s.setPending);
+    const clearPending = usePendingActionsStore((s) => s.clearPending);
 
     const isDialogOpen = targetApproval !== null;
 
@@ -36,11 +39,12 @@ export function useRevokeAction(): UseRevokeActionReturn {
         setError(null);
     }, []);
 
-    const confirmRevoke = useCallback(async (): Promise<void> => {
+    const confirmRevoke = useCallback(async (feeRate?: number): Promise<void> => {
         if (!targetApproval || !walletAddress || !address) return;
 
         setIsLoading(true);
         setError(null);
+        setPending(targetApproval.id, 'revoking');
 
         try {
             await revokeApproval(
@@ -50,13 +54,16 @@ export function useRevokeAction(): UseRevokeActionReturn {
                 targetApproval.spenderAddress,
                 targetApproval.allowance,
                 true,
+                feeRate,
             );
 
+            clearPending(targetApproval.id);
             removeApproval(targetApproval.id);
             void removeCachedApproval(targetApproval.id);
             setTargetApproval(null);
             toast.success('Approval revoked successfully');
         } catch (err: unknown) {
+            clearPending(targetApproval.id);
             const msg = err instanceof Error ? err.message : String(err);
             setError(msg);
             toast.error('Revoke failed', { description: msg });

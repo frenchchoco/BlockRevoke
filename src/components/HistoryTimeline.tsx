@@ -1,7 +1,9 @@
 import { type ReactElement, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowUp, ArrowDown, Clock } from 'lucide-react';
 import { useApprovalStore } from '../stores/approvalStore';
-import { shortenAddress, formatAllowance } from '../lib/formatters';
+import { useNetworkStore } from '../stores/networkStore';
+import { displayAddress, shortenAddress, formatAllowance } from '../lib/formatters';
 import type { ApprovalHistory, Approval } from '../types/approval';
 
 function AllowanceLabel({
@@ -18,23 +20,32 @@ function AllowanceLabel({
 interface HistoryRowProps {
     readonly entry: ApprovalHistory;
     readonly approval: Approval | undefined;
+    readonly index: number;
 }
 
-function HistoryRow({ entry, approval }: HistoryRowProps): ReactElement {
+function HistoryRow({ entry, approval, index }: HistoryRowProps): ReactElement {
+    const networkId = useNetworkStore((s) => s.networkId);
     const increased = entry.newAllowance > entry.previousAllowance;
     const tokenLabel =
         approval !== undefined
             ? `${approval.tokenName} (${approval.tokenSymbol})`
-            : shortenAddress(entry.tokenAddress);
+            : displayAddress(entry.tokenAddress, networkId);
 
     return (
-        <div className="flex items-start gap-3 rounded-lg border border-border bg-card p-3">
-            {/* Direction indicator */}
-            <div
-                className={`mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full ${
+        <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: index * 0.05, duration: 0.3 }}
+            className="flex items-start gap-3 rounded-xl surface p-4 hover:scale-[1.01] transition-transform"
+        >
+            <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: 'spring', bounce: 0.5, delay: index * 0.05 + 0.1 }}
+                className={`mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full ${
                     increased
-                        ? 'bg-green-500/10 text-green-400'
-                        : 'bg-red-500/10 text-red-400'
+                        ? 'bg-v-orange/10 text-v-orange'
+                        : 'bg-v-green/10 text-v-green'
                 }`}
             >
                 {increased ? (
@@ -42,26 +53,25 @@ function HistoryRow({ entry, approval }: HistoryRowProps): ReactElement {
                 ) : (
                     <ArrowDown className="size-4" />
                 )}
-            </div>
+            </motion.div>
 
-            {/* Details */}
             <div className="min-w-0 flex-1 space-y-1">
                 <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-foreground">
                         {tokenLabel}
                     </span>
                     <span
-                        className={`text-xs font-medium ${
-                            increased ? 'text-green-400' : 'text-red-400'
+                        className={`text-xs font-semibold ${
+                            increased ? 'text-v-orange' : 'text-v-green'
                         }`}
                     >
                         {increased ? 'Increased' : 'Decreased'}
                     </span>
                 </div>
 
-                <div className="text-xs text-muted-foreground">
+                <div className="text-xs text-muted-foreground font-mono">
                     <AllowanceLabel value={entry.previousAllowance} approval={approval} />
-                    <span className="mx-1 text-muted-foreground/60">{'->'}</span>
+                    <span className="mx-1.5 text-v-cyan">{'→'}</span>
                     <AllowanceLabel value={entry.newAllowance} approval={approval} />
                 </div>
 
@@ -78,7 +88,7 @@ function HistoryRow({ entry, approval }: HistoryRowProps): ReactElement {
                     </span>
                 </div>
             </div>
-        </div>
+        </motion.div>
     );
 }
 
@@ -102,28 +112,40 @@ export function HistoryTimeline(): ReactElement {
 
     if (sorted.length === 0) {
         return (
-            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-                <Clock className="mb-3 size-10 text-muted-foreground/60" />
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex flex-col items-center justify-center py-20 text-muted-foreground"
+            >
+                <motion.div
+                    animate={{ y: [-5, 5, -5] }}
+                    transition={{ duration: 4, repeat: Infinity }}
+                >
+                    <Clock className="mb-4 size-12 text-muted-foreground/40" />
+                </motion.div>
                 <p className="text-sm">No approval history yet.</p>
-                <p className="text-xs">
+                <p className="text-xs mt-1 text-muted-foreground/60">
                     Run a scan to discover approval changes.
                 </p>
-            </div>
+            </motion.div>
         );
     }
 
     return (
         <div className="space-y-2">
-            {sorted.map((entry) => {
-                const key = `${entry.tokenAddress}-${entry.spenderAddress}`;
-                return (
-                    <HistoryRow
-                        key={entry.id}
-                        entry={entry}
-                        approval={approvalMap.get(key)}
-                    />
-                );
-            })}
+            <AnimatePresence>
+                {sorted.map((entry, index) => {
+                    const key = `${entry.tokenAddress}-${entry.spenderAddress}`;
+                    return (
+                        <HistoryRow
+                            key={entry.id}
+                            entry={entry}
+                            approval={approvalMap.get(key)}
+                            index={index}
+                        />
+                    );
+                })}
+            </AnimatePresence>
         </div>
     );
 }

@@ -1,6 +1,9 @@
 import { type ReactElement, useState, useCallback, useMemo } from 'react';
+import { motion } from 'framer-motion';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
+import { HeroBanner } from './components/HeroBanner';
+import { NetworkSync } from './components/NetworkSync';
 import { DashboardSummary } from './components/DashboardSummary';
 import { FilterBar } from './components/FilterBar';
 import { ApprovalTable } from './components/ApprovalTable';
@@ -9,6 +12,8 @@ import { EditModal } from './components/EditModal';
 import { BatchActions } from './components/BatchActions';
 import { ScanProgress } from './components/ScanProgress';
 import { HistoryTimeline } from './components/HistoryTimeline';
+import { ParticleBackground } from './components/ParticleBackground';
+import { CelebrationEffect } from './components/CelebrationEffect';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
 import { useApprovals } from './hooks/useApprovals';
 import { useWallet } from './hooks/useWallet';
@@ -16,6 +21,7 @@ import { useRevokeAction } from './hooks/useRevokeAction';
 import { useEditAction } from './hooks/useEditAction';
 import { useBatchRevoke } from './hooks/useBatchRevoke';
 import type { Approval } from './types/approval';
+import { cn } from '@/lib/utils';
 
 export default function App(): ReactElement {
     const { approvals, isLoading } = useApprovals();
@@ -23,6 +29,7 @@ export default function App(): ReactElement {
 
     const [filteredApprovals, setFilteredApprovals] = useState<Approval[]>([]);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const [showCelebration, setShowCelebration] = useState(false);
 
     // Revoke action
     const {
@@ -30,9 +37,15 @@ export default function App(): ReactElement {
         isLoading: revokeLoading,
         error: revokeError,
         startRevoke,
-        confirmRevoke,
+        confirmRevoke: rawConfirmRevoke,
         cancelRevoke,
     } = useRevokeAction();
+
+    // Wrap confirmRevoke to trigger celebration + pass feeRate
+    const confirmRevoke = useCallback((feeRate?: number): void => {
+        rawConfirmRevoke(feeRate);
+        setShowCelebration(true);
+    }, [rawConfirmRevoke]);
 
     // Edit action
     const {
@@ -94,8 +107,8 @@ export default function App(): ReactElement {
         return approvals.filter((a) => selectedIds.has(a.id));
     }, [approvals, selectedIds]);
 
-    const handleBatchExecute = useCallback((): void => {
-        void executeBatch(selectedApprovals);
+    const handleBatchExecute = useCallback((feeRate?: number): void => {
+        void executeBatch(selectedApprovals, feeRate);
     }, [selectedApprovals, executeBatch]);
 
     const handleBatchCancel = useCallback((): void => {
@@ -103,38 +116,52 @@ export default function App(): ReactElement {
     }, [cancelBatch]);
 
     return (
-        <div className="min-h-screen flex flex-col bg-background text-foreground">
-            <Header />
-            <main className="flex-1 container mx-auto px-4 py-6 max-w-6xl">
-                {isReady ? <ScanProgress /> : null}
+        <div className="min-h-screen flex flex-col bg-background text-foreground relative">
+            <ParticleBackground />
+            <NetworkSync />
 
-                <Tabs defaultValue="approvals" className="w-full">
-                    <TabsList className="mb-4">
-                        <TabsTrigger value="approvals">Approvals</TabsTrigger>
-                        <TabsTrigger value="history">History</TabsTrigger>
-                    </TabsList>
+            <div className="relative z-10 flex flex-col min-h-screen">
+                <Header />
 
-                    <TabsContent value="approvals">
-                        <DashboardSummary approvals={filteredApprovals} />
-                        <FilterBar approvals={approvals} onFiltered={handleFiltered} />
-                        <ApprovalTable
-                            approvals={filteredApprovals}
-                            selectedIds={selectedIds}
-                            onSelectToggle={handleSelectToggle}
-                            onSelectAll={handleSelectAll}
-                            onRevoke={handleRevoke}
-                            onEdit={handleEdit}
-                            isLoading={isLoading}
-                            isConnected={isReady}
-                        />
-                    </TabsContent>
+                <motion.main
+                    className={cn('flex-1 container mx-auto px-4 py-6 max-w-6xl', selectedIds.size > 0 && 'pb-24')}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
+                >
+                    <HeroBanner />
 
-                    <TabsContent value="history">
-                        <HistoryTimeline />
-                    </TabsContent>
-                </Tabs>
-            </main>
-            <Footer />
+                    {isReady ? <ScanProgress /> : null}
+
+                    <Tabs defaultValue="approvals" className="w-full">
+                        <TabsList className="mb-4">
+                            <TabsTrigger value="approvals">Approvals</TabsTrigger>
+                            <TabsTrigger value="history">History</TabsTrigger>
+                        </TabsList>
+
+                        <TabsContent value="approvals">
+                            <DashboardSummary approvals={filteredApprovals} />
+                            <FilterBar approvals={approvals} onFiltered={handleFiltered} />
+                            <ApprovalTable
+                                approvals={filteredApprovals}
+                                selectedIds={selectedIds}
+                                onSelectToggle={handleSelectToggle}
+                                onSelectAll={handleSelectAll}
+                                onRevoke={handleRevoke}
+                                onEdit={handleEdit}
+                                isLoading={isLoading}
+                                isConnected={isReady}
+                            />
+                        </TabsContent>
+
+                        <TabsContent value="history">
+                            <HistoryTimeline />
+                        </TabsContent>
+                    </Tabs>
+                </motion.main>
+
+                <Footer />
+            </div>
 
             <RevokeConfirmDialog
                 approval={revokeTarget}
@@ -160,6 +187,11 @@ export default function App(): ReactElement {
                     batchState={batchState}
                 />
             ) : null}
+
+            <CelebrationEffect
+                trigger={showCelebration}
+                onComplete={(): void => setShowCelebration(false)}
+            />
         </div>
     );
 }

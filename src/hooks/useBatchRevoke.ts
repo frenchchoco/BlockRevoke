@@ -4,6 +4,7 @@ import type { Approval, BatchRevokeItem } from '../types/approval';
 import { revokeApproval } from '../services/approvalService';
 import { removeCachedApproval } from '../services/cacheService';
 import { useApprovalStore } from '../stores/approvalStore';
+import { usePendingActionsStore } from '../stores/pendingActionsStore';
 import { useWallet } from './useWallet';
 
 export interface BatchRevokeState {
@@ -16,7 +17,7 @@ export interface BatchRevokeState {
 interface UseBatchRevokeReturn {
     batchState: BatchRevokeState | null;
     startBatch: (approvals: Approval[]) => void;
-    executeBatch: (approvals: Approval[]) => Promise<void>;
+    executeBatch: (approvals: Approval[], feeRate?: number) => Promise<void>;
     cancelBatch: () => void;
     reset: () => void;
 }
@@ -27,6 +28,8 @@ export function useBatchRevoke(): UseBatchRevokeReturn {
 
     const { walletAddress, address, networkId } = useWallet();
     const removeApproval = useApprovalStore((s) => s.removeApproval);
+    const setPending = usePendingActionsStore((s) => s.setPending);
+    const clearPending = usePendingActionsStore((s) => s.clearPending);
 
     const startBatch = useCallback((approvals: Approval[]): void => {
         cancelledRef.current = false;
@@ -46,7 +49,7 @@ export function useBatchRevoke(): UseBatchRevokeReturn {
         });
     }, []);
 
-    const executeBatch = useCallback(async (approvals: Approval[]): Promise<void> => {
+    const executeBatch = useCallback(async (approvals: Approval[], feeRate?: number): Promise<void> => {
         if (!walletAddress || !address || approvals.length === 0) return;
 
         cancelledRef.current = false;
@@ -73,7 +76,8 @@ export function useBatchRevoke(): UseBatchRevokeReturn {
             const approval = approvals[i];
             if (!approval) continue;
 
-            // Set status to signing
+            // Set status to signing + mark pending
+            setPending(approval.id, 'revoking');
             items[i] = { approvalId: approval.id, status: 'signing', txHash: null, error: null };
             setBatchState({
                 items: [...items],
@@ -83,21 +87,25 @@ export function useBatchRevoke(): UseBatchRevokeReturn {
             });
 
             try {
+                // Only charge the dev fee on the first revoke of the batch
                 const txHash = await revokeApproval(
                     networkId,
                     address,
                     approval.tokenAddress,
                     approval.spenderAddress,
                     approval.allowance,
-                    true,
+                    i === 0,
+                    feeRate,
                 );
 
+                clearPending(approval.id);
                 removeApproval(approval.id);
                 void removeCachedApproval(approval.id);
 
                 items[i] = { approvalId: approval.id, status: 'success', txHash, error: null };
                 completed++;
             } catch (err: unknown) {
+                clearPending(approval.id);
                 const msg = err instanceof Error ? err.message : String(err);
                 items[i] = { approvalId: approval.id, status: 'failed', txHash: null, error: msg };
                 completed++;

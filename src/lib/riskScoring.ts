@@ -27,16 +27,3 @@ export function calculateRiskScore(
     return 'low';
 }
 
-export const RISK_COLORS: Record<RiskLevel, string> = {
-    critical: 'text-red-500',
-    high: 'text-orange-500',
-    medium: 'text-yellow-500',
-    low: 'text-green-500',
-};
-
-export const RISK_BG_COLORS: Record<RiskLevel, string> = {
-    critical: 'bg-red-500/10 border-red-500/20',
-    high: 'bg-orange-500/10 border-orange-500/20',
-    medium: 'bg-yellow-500/10 border-yellow-500/20',
-    low: 'bg-green-500/10 border-green-500/20',
-};

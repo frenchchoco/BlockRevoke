@@ -122,9 +122,22 @@ export async function getCachedApprovals(
 ): Promise<CachedApproval[]> {
     const db = await getDB();
     const all = await db.getAll('approvals');
-    return all.filter(
-        (a) => a.networkId === networkId && a.walletAddress === walletAddress,
-    );
+    const allKeys = await db.getAllKeys('approvals');
+    const matching: CachedApproval[] = [];
+
+    for (let i = 0; i < all.length; i++) {
+        const a = all[i] as CachedApproval;
+        const key = allKeys[i] as string;
+        if (a.networkId !== networkId || a.walletAddress !== walletAddress) continue;
+        if (a.allowance === '0') {
+            // Clean up stale zero-allowance entries from IndexedDB
+            void db.delete('approvals', key);
+            continue;
+        }
+        matching.push(a);
+    }
+
+    return matching;
 }
 
 export async function cacheApproval(

@@ -1,4 +1,5 @@
-import type { ReactElement } from 'react';
+import { type ReactElement, useState, useCallback, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import {
     Dialog,
     DialogContent,
@@ -9,14 +10,17 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { RiskBadge } from './RiskBadge';
+import { FeeExplainer } from './FeeExplainer';
+import { FeeSelector } from './FeeSelector';
 import type { Approval } from '../types/approval';
-import { formatAllowance, shortenAddress, formatSats } from '../lib/formatters';
-import { DEV_FEE_SATS } from '../config/constants';
-import { Loader2, AlertTriangle } from 'lucide-react';
+import { formatAllowance, displayAddress } from '../lib/formatters';
+import { useNetworkStore } from '../stores/networkStore';
+import { fetchLiveFeeRates, type LiveFeeRates } from '../services/gasService';
+import { Loader2, Zap } from 'lucide-react';
 
 interface RevokeConfirmDialogProps {
     readonly approval: Approval | null;
-    readonly onConfirm: () => void;
+    readonly onConfirm: (feeRate?: number) => void;
     readonly onCancel: () => void;
     readonly isLoading: boolean;
     readonly error: string | null;
@@ -30,20 +34,50 @@ export function RevokeConfirmDialog({
     error,
 }: RevokeConfirmDialogProps): ReactElement {
     const isOpen = approval !== null;
+    const networkId = useNetworkStore((s) => s.networkId);
+
+    const [liveRates, setLiveRates] = useState<LiveFeeRates | null>(null);
+    const [ratesLoading, setRatesLoading] = useState(false);
+    const [selectedFeeRate, setSelectedFeeRate] = useState<number | undefined>(undefined);
+
+    // Fetch live rates when dialog opens
+    useEffect(() => {
+        if (!isOpen) {
+            setLiveRates(null);
+            setSelectedFeeRate(undefined);
+            return;
+        }
+        setRatesLoading(true);
+        void fetchLiveFeeRates(networkId).then((rates) => {
+            setLiveRates(rates);
+            setRatesLoading(false);
+        });
+    }, [isOpen, networkId]);
+
+    const handleFeeChange = useCallback((rate: number): void => {
+        setSelectedFeeRate(rate);
+    }, []);
+
+    const handleConfirm = useCallback((): void => {
+        onConfirm(selectedFeeRate);
+    }, [onConfirm, selectedFeeRate]);
 
     return (
         <Dialog open={isOpen} onOpenChange={(open): void => { if (!open) onCancel(); }}>
-            <DialogContent showCloseButton={!isLoading}>
+            <DialogContent showCloseButton={!isLoading} className="max-w-md">
                 <DialogHeader>
-                    <DialogTitle>Confirm Revoke</DialogTitle>
+                    <DialogTitle className="flex items-center gap-2 font-display">
+                        <Zap className="size-5 text-v-red" />
+                        Confirm Revoke
+                    </DialogTitle>
                     <DialogDescription>
-                        Are you sure you want to revoke this approval?
+                        This will set the approval to zero, preventing the spender from accessing your tokens.
                     </DialogDescription>
                 </DialogHeader>
 
                 {approval ? (
                     <div className="space-y-4">
-                        <div className="rounded-lg border border-border bg-muted/50 p-4 space-y-3">
+                        <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-3">
                             <div className="flex items-center justify-between">
                                 <span className="text-sm text-muted-foreground">Token</span>
                                 <span className="font-medium text-foreground">
@@ -52,13 +86,13 @@ export function RevokeConfirmDialog({
                             </div>
                             <div className="flex items-center justify-between">
                                 <span className="text-sm text-muted-foreground">Spender</span>
-                                <span className="font-medium text-foreground">
-                                    {approval.spenderLabel ?? shortenAddress(approval.spenderAddress)}
+                                <span className="font-medium text-foreground font-mono text-sm">
+                                    {approval.spenderLabel ?? displayAddress(approval.spenderAddress, networkId)}
                                 </span>
                             </div>
                             <div className="flex items-center justify-between">
                                 <span className="text-sm text-muted-foreground">Current Allowance</span>
-                                <span className="font-medium text-foreground">
+                                <span className={`font-medium ${approval.isUnlimited ? 'text-v-red' : 'text-foreground'}`}>
                                     {formatAllowance(approval.allowance, approval.tokenDecimals)}
                                 </span>
                             </div>
@@ -68,17 +102,23 @@ export function RevokeConfirmDialog({
                             </div>
                         </div>
 
-                        <div className="rounded-lg border border-border bg-muted/50 p-3">
-                            <div className="flex items-center gap-2 text-sm text-amber-400">
-                                <AlertTriangle className="size-4 shrink-0" />
-                                <span>Fee: {formatSats(DEV_FEE_SATS)}</span>
-                            </div>
-                        </div>
+                        {/* Fee selector */}
+                        <FeeSelector
+                            liveRates={liveRates}
+                            loading={ratesLoading}
+                            onChange={handleFeeChange}
+                        />
+
+                        <FeeExplainer mode="single" />
 
                         {error ? (
-                            <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-3">
-                                <p className="text-sm text-red-400">{error}</p>
-                            </div>
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="rounded-xl border border-v-red/20 bg-v-red/5 p-3"
+                            >
+                                <p className="text-sm text-v-red">{error}</p>
+                            </motion.div>
                         ) : null}
                     </div>
                 ) : null}
@@ -93,7 +133,7 @@ export function RevokeConfirmDialog({
                     </Button>
                     <Button
                         variant="destructive"
-                        onClick={onConfirm}
+                        onClick={handleConfirm}
                         disabled={isLoading}
                     >
                         {isLoading ? (
@@ -102,7 +142,10 @@ export function RevokeConfirmDialog({
                                 Revoking...
                             </>
                         ) : (
-                            'Revoke Approval'
+                            <>
+                                <Zap className="size-4" />
+                                Revoke Approval
+                            </>
                         )}
                     </Button>
                 </DialogFooter>

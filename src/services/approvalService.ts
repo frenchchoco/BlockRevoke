@@ -10,6 +10,7 @@ import { getOP20Contract } from './contractService';
 import { calculateRiskScore } from '../lib/riskScoring';
 import { discoverFactoryTokens } from './factoryService';
 import { isValidBitcoinAddress } from '../lib/addressValidation';
+import { getPriorityFee } from './gasService';
 
 /**
  * Validate DEV_ADDRESS at module load using AddressVerificator.
@@ -103,6 +104,7 @@ export async function revokeApproval(
     spenderAddress: string,
     currentAllowance: bigint,
     devFeeRequired: boolean,
+    feeRate?: number,
 ): Promise<string> {
     const network = getNetwork(networkId);
     const spenderAddr = Address.fromString(spenderAddress);
@@ -126,6 +128,8 @@ export async function revokeApproval(
         refundTo: owner.p2tr(network),
         maximumAllowedSatToSpend: 100_000n,
         network,
+        priorityFee: getPriorityFee(networkId),
+        ...(feeRate !== undefined ? { feeRate } : {}),
         ...(shouldChargeFee ? { extraOutputs: devFeeOutputs } : {}),
     };
 
@@ -142,6 +146,7 @@ export async function editAllowance(
     currentAllowance: bigint,
     newAllowance: bigint,
     devFeeRequired: boolean,
+    feeRate?: number,
 ): Promise<string> {
     const network = getNetwork(networkId);
     const spenderAddr = Address.fromString(spenderAddress);
@@ -172,6 +177,8 @@ export async function editAllowance(
         refundTo: owner.p2tr(network),
         maximumAllowedSatToSpend: 100_000n,
         network,
+        priorityFee: getPriorityFee(networkId),
+        ...(feeRate !== undefined ? { feeRate } : {}),
         ...(shouldChargeFee ? { extraOutputs: devFeeOutputs } : {}),
     };
 

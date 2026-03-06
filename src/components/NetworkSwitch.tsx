@@ -17,6 +17,11 @@ function isNetworkId(value: string): value is NetworkId {
     return VALID_NETWORK_IDS.has(value);
 }
 
+const DOT_COLOR: Record<NetworkId, string> = {
+    mainnet: 'bg-v-green',
+    testnet: 'bg-v-orange',
+};
+
 export function NetworkSwitch(): ReactElement {
     const networkId: NetworkId = useNetworkStore((s) => s.networkId);
     const setNetwork = useNetworkStore((s) => s.setNetwork);
@@ -30,12 +35,18 @@ export function NetworkSwitch(): ReactElement {
     return (
         <Select value={networkId} onValueChange={handleChange}>
             <SelectTrigger className="w-[140px]" size="sm">
-                <SelectValue placeholder="Select network" />
+                <span className="flex items-center gap-2">
+                    <span className={`size-2 rounded-full ${DOT_COLOR[networkId]}`} />
+                    <SelectValue placeholder="Select network" />
+                </span>
             </SelectTrigger>
             <SelectContent>
                 {NETWORK_IDS.map((id) => (
                     <SelectItem key={id} value={id}>
-                        {NETWORK_CONFIGS[id].name}
+                        <span className="flex items-center gap-2">
+                            <span className={`size-2 rounded-full ${DOT_COLOR[id]}`} />
+                            {NETWORK_CONFIGS[id].name}
+                        </span>
                     </SelectItem>
                 ))}
             </SelectContent>
