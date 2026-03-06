@@ -27,7 +27,7 @@ export function useBatchRevoke(): UseBatchRevokeReturn {
     const [batchState, setBatchState] = useState<BatchRevokeState | null>(null);
     const cancelledRef = useRef(false);
 
-    const { walletAddress, networkId } = useWallet();
+    const { walletAddress, address, networkId } = useWallet();
     const removeApproval = useApprovalStore((s) => s.removeApproval);
 
     const startBatch = useCallback((approvals: Approval[]): void => {
@@ -49,7 +49,7 @@ export function useBatchRevoke(): UseBatchRevokeReturn {
     }, []);
 
     const executeBatch = useCallback(async (approvals: Approval[]): Promise<void> => {
-        if (!walletAddress || approvals.length === 0) return;
+        if (!walletAddress || !address || approvals.length === 0) return;
 
         cancelledRef.current = false;
 
@@ -89,7 +89,7 @@ export function useBatchRevoke(): UseBatchRevokeReturn {
 
                 const txHash = await revokeApproval(
                     networkId,
-                    walletAddress,
+                    address,
                     approval.tokenAddress,
                     approval.spenderAddress,
                     approval.allowance,
@@ -123,7 +123,7 @@ export function useBatchRevoke(): UseBatchRevokeReturn {
         setBatchState((prev) =>
             prev ? { ...prev, isRunning: false } : prev,
         );
-    }, [walletAddress, networkId, removeApproval]);
+    }, [walletAddress, address, networkId, removeApproval]);
 
     const cancelBatch = useCallback((): void => {
         cancelledRef.current = true;

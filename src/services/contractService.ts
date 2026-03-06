@@ -1,5 +1,5 @@
 import { getContract, type IOP20Contract, OP_20_ABI } from 'opnet';
-import { Address } from '@btc-vision/transaction';
+import type { Address } from '@btc-vision/transaction';
 import type { Network } from '@btc-vision/bitcoin';
 import type { NetworkId } from '../types/network';
 import { getReadProvider, getNetwork } from './providerService';
@@ -25,11 +25,11 @@ export function getOP20Contract(
 
     const provider = getReadProvider(networkId);
     const network: Network = getNetwork(networkId);
-    const addr: Address = Address.fromString(tokenAddress);
 
+    // Pass tokenAddress string directly — getContract resolves it internally.
     const contract: IOP20Contract = sender !== undefined
-        ? getContract<IOP20Contract>(addr, OP_20_ABI, provider, network, sender)
-        : getContract<IOP20Contract>(addr, OP_20_ABI, provider, network);
+        ? getContract<IOP20Contract>(tokenAddress, OP_20_ABI, provider, network, sender)
+        : getContract<IOP20Contract>(tokenAddress, OP_20_ABI, provider, network);
     contractCache.set(key, contract);
     return contract;
 }

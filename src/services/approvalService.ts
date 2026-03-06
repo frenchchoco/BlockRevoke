@@ -29,10 +29,8 @@ const VALIDATED_DEV_ADDRESS: string | null = (() => {
 
 export async function discoverKnownApprovals(
     networkId: NetworkId,
-    ownerAddress: string,
+    owner: Address,
 ): Promise<Approval[]> {
-    const owner = Address.fromString(ownerAddress);
-
     // Merge known tokens with factory-discovered tokens (dedup by address)
     const knownTokens: readonly TokenInfo[] = KNOWN_TOKENS[networkId];
 
@@ -100,14 +98,13 @@ export async function discoverKnownApprovals(
 
 export async function revokeApproval(
     networkId: NetworkId,
-    ownerAddress: string,
+    owner: Address,
     tokenAddress: string,
     spenderAddress: string,
     currentAllowance: bigint,
     devFeeRequired: boolean,
 ): Promise<string> {
     const network = getNetwork(networkId);
-    const owner = Address.fromString(ownerAddress);
     const spenderAddr = Address.fromString(spenderAddress);
 
     const contract = getOP20Contract(tokenAddress, networkId, owner);
@@ -139,7 +136,7 @@ export async function revokeApproval(
 
 export async function editAllowance(
     networkId: NetworkId,
-    ownerAddress: string,
+    owner: Address,
     tokenAddress: string,
     spenderAddress: string,
     currentAllowance: bigint,
@@ -147,7 +144,6 @@ export async function editAllowance(
     devFeeRequired: boolean,
 ): Promise<string> {
     const network = getNetwork(networkId);
-    const owner = Address.fromString(ownerAddress);
     const spenderAddr = Address.fromString(spenderAddress);
 
     const contract = getOP20Contract(tokenAddress, networkId, owner);

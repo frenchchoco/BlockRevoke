@@ -16,6 +16,6 @@ export function useWallet(): UseWalletReturn {
     return {
         ...wallet,
         networkId,
-        isReady: wallet.walletAddress !== null && wallet.walletAddress !== undefined,
+        isReady: wallet.walletAddress !== null && wallet.address !== null,
     };
 }

@@ -23,7 +23,7 @@ export function useRevokeAction(): UseRevokeActionReturn {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const { walletAddress, networkId } = useWallet();
+    const { walletAddress, address, networkId } = useWallet();
     const removeApproval = useApprovalStore((s) => s.removeApproval);
 
     const isDialogOpen = targetApproval !== null;
@@ -39,7 +39,7 @@ export function useRevokeAction(): UseRevokeActionReturn {
     }, []);
 
     const confirmRevoke = useCallback(async (): Promise<void> => {
-        if (!targetApproval || !walletAddress) return;
+        if (!targetApproval || !walletAddress || !address) return;
 
         setIsLoading(true);
         setError(null);
@@ -49,7 +49,7 @@ export function useRevokeAction(): UseRevokeActionReturn {
 
             await revokeApproval(
                 networkId,
-                walletAddress,
+                address,
                 targetApproval.tokenAddress,
                 targetApproval.spenderAddress,
                 targetApproval.allowance,
@@ -69,7 +69,7 @@ export function useRevokeAction(): UseRevokeActionReturn {
         } finally {
             setIsLoading(false);
         }
-    }, [targetApproval, walletAddress, networkId, removeApproval]);
+    }, [targetApproval, walletAddress, address, networkId, removeApproval]);
 
     return {
         targetApproval,

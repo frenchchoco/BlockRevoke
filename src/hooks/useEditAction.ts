@@ -24,7 +24,7 @@ export function useEditAction(): UseEditActionReturn {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const { walletAddress, networkId } = useWallet();
+    const { walletAddress, address, networkId } = useWallet();
     const updateAllowance = useApprovalStore((s) => s.updateAllowance);
 
     const isModalOpen = targetApproval !== null;
@@ -41,7 +41,7 @@ export function useEditAction(): UseEditActionReturn {
 
     const confirmEdit = useCallback(
         async (newAllowance: bigint): Promise<void> => {
-            if (!targetApproval || !walletAddress) return;
+            if (!targetApproval || !walletAddress || !address) return;
 
             setIsLoading(true);
             setError(null);
@@ -51,7 +51,7 @@ export function useEditAction(): UseEditActionReturn {
 
                 await editAllowance(
                     networkId,
-                    walletAddress,
+                    address,
                     targetApproval.tokenAddress,
                     targetApproval.spenderAddress,
                     targetApproval.allowance,
@@ -77,7 +77,7 @@ export function useEditAction(): UseEditActionReturn {
                 setIsLoading(false);
             }
         },
-        [targetApproval, walletAddress, networkId, updateAllowance],
+        [targetApproval, walletAddress, address, networkId, updateAllowance],
     );
 
     return {

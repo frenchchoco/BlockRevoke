@@ -30,7 +30,7 @@ interface UseScanReturn {
 }
 
 export function useScan(): UseScanReturn {
-    const { walletAddress, networkId, isReady } = useWallet();
+    const { walletAddress, address, networkId, isReady } = useWallet();
     const {
         isScanning,
         currentBlock,
@@ -48,10 +48,10 @@ export function useScan(): UseScanReturn {
     const foundCountRef = useRef(0);
 
     const startScan = useCallback((): void => {
-        if (!isReady || !walletAddress) return;
+        if (!isReady || !walletAddress || !address) return;
         if (isScanning) return;
 
-        const ownerAddress = walletAddress;
+        const ownerHex = address.toHex();
         const net = networkId;
 
         setScanning(true);
@@ -59,11 +59,11 @@ export function useScan(): UseScanReturn {
 
         void (async (): Promise<void> => {
             try {
-                const start = await getLastScannedBlock(net, ownerAddress);
+                const start = await getLastScannedBlock(net, walletAddress);
                 // Start from the next block after the last scanned one, or 0 if never scanned
                 const fromBlock = start > 0 ? start + 1 : 0;
 
-                const scanner = new BlockScanner(net, ownerAddress);
+                const scanner = new BlockScanner(net, ownerHex);
                 scannerRef.current = scanner;
 
                 const spenders = KNOWN_SPENDERS[net];
@@ -112,7 +112,7 @@ export function useScan(): UseScanReturn {
                                 foundCountRef.current++;
 
                                 // Persist to IndexedDB
-                                await cacheApproval(net, ownerAddress, {
+                                await cacheApproval(net, walletAddress, {
                                     tokenAddress: discovered.tokenAddress,
                                     tokenName: meta.name,
                                     tokenSymbol: meta.symbol,
@@ -139,7 +139,7 @@ export function useScan(): UseScanReturn {
 
                                 addHistory(historyEntry);
 
-                                await addHistoryEntry(net, ownerAddress, {
+                                await addHistoryEntry(net, walletAddress, {
                                     tokenAddress: discovered.tokenAddress,
                                     spenderAddress: discovered.spenderAddress,
                                     previousAllowance: 0n,
@@ -168,7 +168,7 @@ export function useScan(): UseScanReturn {
                             `Scan complete. Found ${count} approval${count === 1 ? '' : 's'}`,
                         );
 
-                        void setLastScannedBlock(net, ownerAddress, lastBlock);
+                        void setLastScannedBlock(net, walletAddress, lastBlock);
                     },
 
                     onError: (scanError: string): void => {
@@ -186,6 +186,7 @@ export function useScan(): UseScanReturn {
     }, [
         isReady,
         walletAddress,
+        address,
         isScanning,
         networkId,
         setScanning,

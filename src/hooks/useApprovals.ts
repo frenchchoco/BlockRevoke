@@ -16,7 +16,7 @@ interface UseApprovalsReturn {
 }
 
 export function useApprovals(): UseApprovalsReturn {
-    const { walletAddress, networkId, isReady } = useWallet();
+    const { walletAddress, address, networkId, isReady } = useWallet();
     const approvals = useApprovalStore((s) => s.approvals);
     const history = useApprovalStore((s) => s.history);
     const addApprovals = useApprovalStore((s) => s.addApprovals);
@@ -25,7 +25,7 @@ export function useApprovals(): UseApprovalsReturn {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!isReady || !walletAddress) {
+        if (!isReady || !walletAddress || !address) {
             clearAll();
             return;
         }
@@ -67,7 +67,7 @@ export function useApprovals(): UseApprovalsReturn {
 
             // Then discover fresh approvals via RPC
             try {
-                const found = await discoverKnownApprovals(networkId, walletAddress);
+                const found = await discoverKnownApprovals(networkId, address);
                 if (!cancelled) {
                     addApprovals(found);
                 }
@@ -89,7 +89,7 @@ export function useApprovals(): UseApprovalsReturn {
         return (): void => {
             cancelled = true;
         };
-    }, [walletAddress, networkId, isReady, addApprovals, clearAll]);
+    }, [walletAddress, address, networkId, isReady, addApprovals, clearAll]);
 
     return { approvals, history, isLoading, error };
 }
