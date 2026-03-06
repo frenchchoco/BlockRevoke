@@ -18,7 +18,6 @@ import { getPriorityFee } from './gasService';
  */
 const VALIDATED_DEV_ADDRESS: string | null = (() => {
     if (DEV_ADDRESS === null) return null;
-    // Validate against both mainnet and testnet; accept if valid on either.
     if (
         isValidBitcoinAddress(DEV_ADDRESS, networks.bitcoin) ||
         isValidBitcoinAddress(DEV_ADDRESS, networks.opnetTestnet)

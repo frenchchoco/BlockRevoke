@@ -27,9 +27,12 @@ export interface IndexerQueryResult {
 
 /**
  * Base URL for the indexer API.
- * Uses same-origin — Vercel rewrites /api/* to the Hetzner VPS.
+ * In dev: uses VITE_INDEXER_URL (direct VPS access).
+ * In prod: uses same-origin (Vercel proxy /api/*).
  */
 function getApiBase(): string {
+    const envUrl = import.meta.env.VITE_INDEXER_URL as string | undefined;
+    if (envUrl) return envUrl.replace(/\/+$/, '');
     if (typeof window !== 'undefined' && window.location) {
         return window.location.origin;
     }
