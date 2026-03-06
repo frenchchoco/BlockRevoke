@@ -47,13 +47,18 @@ function decodeApprovedEvent(data: Uint8Array): DecodedApprovedEvent {
  * Initial blocks per single RPC call.
  * Adaptive: will halve on repeated failures.
  */
-const INITIAL_BATCH_SIZE = 200;
+/**
+ * Client-side batch size — conservative since the VPS indexer handles
+ * the heavy scanning. The frontend only scans the small gap between
+ * the last indexed block and the chain head.
+ */
+const INITIAL_BATCH_SIZE = 50;
 
 /** Minimum batch size before giving up on a range. */
-const MIN_BATCH_SIZE = 25;
+const MIN_BATCH_SIZE = 10;
 
 /** Number of concurrent batch fetches. */
-const CONCURRENCY = 10;
+const CONCURRENCY = 3;
 
 /** Max retries per failed batch before reducing size. */
 const MAX_RETRIES = 3;
