@@ -5,36 +5,36 @@ const DB_NAME = 'blockrevoke';
 const DB_VERSION = 2;
 
 export interface CachedApproval {
-    networkId: string;
-    walletAddress: string;
-    tokenAddress: string;
-    tokenName: string;
-    tokenSymbol: string;
-    tokenDecimals: number;
-    spenderAddress: string;
-    spenderLabel: string | null;
-    allowance: string; // bigint serialised as string
-    discoveredVia: string;
-    lastUpdatedBlock: number | null;
-    lastUpdatedTxHash: string | null;
+    readonly networkId: string;
+    readonly walletAddress: string;
+    readonly tokenAddress: string;
+    readonly tokenName: string;
+    readonly tokenSymbol: string;
+    readonly tokenDecimals: number;
+    readonly spenderAddress: string;
+    readonly spenderLabel: string | null;
+    readonly allowance: string; // bigint serialised as string
+    readonly discoveredVia: string;
+    readonly lastUpdatedBlock: number | null;
+    readonly lastUpdatedTxHash: string | null;
 }
 
 export interface CachedHistory {
-    networkId: string;
-    walletAddress: string;
-    tokenAddress: string;
-    spenderAddress: string;
-    previousAllowance: string; // bigint serialised as string
-    newAllowance: string; // bigint serialised as string
-    txHash: string;
-    blockNumber: number;
-    timestamp: number | null;
+    readonly networkId: string;
+    readonly walletAddress: string;
+    readonly tokenAddress: string;
+    readonly spenderAddress: string;
+    readonly previousAllowance: string; // bigint serialised as string
+    readonly newAllowance: string; // bigint serialised as string
+    readonly txHash: string;
+    readonly blockNumber: number;
+    readonly timestamp: number | null;
 }
 
 export interface CachedFactoryTokens {
-    networkId: string;
-    tokens: TokenInfo[];
-    updatedAt: number;
+    readonly networkId: string;
+    readonly tokens: readonly TokenInfo[];
+    readonly updatedAt: number;
 }
 
 interface BlockRevokeDB extends DBSchema {
@@ -48,16 +48,10 @@ interface BlockRevokeDB extends DBSchema {
     'approvals': {
         key: string; // `${tokenAddr}:${spenderAddr}`
         value: CachedApproval;
-        indexes: {
-            'by-wallet': string;
-        };
     };
     'history': {
         key: number; // auto-increment
         value: CachedHistory;
-        indexes: {
-            'by-wallet': string;
-        };
     };
     'factory-tokens': {
         key: string; // networkId
@@ -76,24 +70,14 @@ function getDB(): Promise<IDBPDatabase<BlockRevokeDB>> {
                     db.createObjectStore('scan-progress');
                 }
 
-                // approvals store with composite index on wallet
+                // approvals store
                 if (!db.objectStoreNames.contains('approvals')) {
-                    const approvalStore = db.createObjectStore('approvals');
-                    approvalStore.createIndex(
-                        'by-wallet',
-                        ['networkId', 'walletAddress'] as unknown as string,
-                    );
+                    db.createObjectStore('approvals');
                 }
 
                 // history store with auto-increment key
                 if (!db.objectStoreNames.contains('history')) {
-                    const historyStore = db.createObjectStore('history', {
-                        autoIncrement: true,
-                    });
-                    historyStore.createIndex(
-                        'by-wallet',
-                        ['networkId', 'walletAddress'] as unknown as string,
-                    );
+                    db.createObjectStore('history', { autoIncrement: true });
                 }
 
                 // factory-tokens store (added in v2)
@@ -227,7 +211,7 @@ const FACTORY_CACHE_TTL_MS = 60 * 60 * 1000;
 
 export async function getCachedFactoryTokens(
     networkId: string,
-): Promise<TokenInfo[]> {
+): Promise<readonly TokenInfo[]> {
     const db = await getDB();
     const record = await db.get('factory-tokens', networkId);
     if (!record) return [];
@@ -240,7 +224,7 @@ export async function getCachedFactoryTokens(
 
 export async function cacheFactoryTokens(
     networkId: string,
-    tokens: TokenInfo[],
+    tokens: readonly TokenInfo[],
 ): Promise<void> {
     const db = await getDB();
     const value: CachedFactoryTokens = {

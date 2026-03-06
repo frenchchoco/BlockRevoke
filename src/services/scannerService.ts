@@ -13,10 +13,10 @@ export interface DiscoveredApproval {
 }
 
 export interface ScanCallbacks {
-    onApprovalFound: (approval: DiscoveredApproval) => void;
-    onProgress: (currentBlock: number, latestBlock: number) => void;
-    onComplete: (lastScannedBlock: number) => void;
-    onError: (error: string) => void;
+    readonly onApprovalFound: (approval: DiscoveredApproval) => void;
+    readonly onProgress: (currentBlock: number, latestBlock: number) => void;
+    readonly onComplete: (lastScannedBlock: number) => void;
+    readonly onError: (error: string) => void;
 }
 
 interface DecodedApprovedEvent {
@@ -35,43 +35,43 @@ interface DecodedApprovedEvent {
  */
 function decodeApprovedEvent(data: Uint8Array): DecodedApprovedEvent {
     const reader = new BinaryReader(data);
-    const owner = reader.readAddress();
-    const spender = reader.readAddress();
-    const amount = reader.readU256();
+    const owner: Address = reader.readAddress();
+    const spender: Address = reader.readAddress();
+    const amount: bigint = reader.readU256();
     return { owner, spender, amount };
 }
 
 const BATCH_SIZE = 5;
 
 export class BlockScanner {
-    private cancelled = false;
-    private readonly provider: JSONRpcProvider;
-    private readonly ownerHex: string;
+    #cancelled = false;
+    readonly #provider: JSONRpcProvider;
+    readonly #ownerHex: string;
 
     constructor(networkId: NetworkId, ownerAddress: string) {
-        this.provider = getReadProvider(networkId);
-        this.ownerHex = ownerAddress.toLowerCase();
+        this.#provider = getReadProvider(networkId);
+        this.#ownerHex = ownerAddress.toLowerCase();
     }
 
     async scan(startBlock: number, callbacks: ScanCallbacks): Promise<void> {
-        this.cancelled = false;
+        this.#cancelled = false;
 
         try {
-            const latestBlockBig: bigint = await this.provider.getBlockNumber();
-            const latestBlock = Number(latestBlockBig);
+            const latestBlockBig: bigint = await this.#provider.getBlockNumber();
+            const latestBlock: number = Number(latestBlockBig);
 
             for (
                 let blockNum = startBlock;
                 blockNum <= latestBlock;
                 blockNum += BATCH_SIZE
             ) {
-                if (this.cancelled) break;
+                if (this.#cancelled) break;
 
-                const endBlock = Math.min(blockNum + BATCH_SIZE - 1, latestBlock);
+                const endBlock: number = Math.min(blockNum + BATCH_SIZE - 1, latestBlock);
 
                 for (let b = blockNum; b <= endBlock; b++) {
-                    if (this.cancelled) break;
-                    await this.processBlock(b, callbacks);
+                    if (this.#cancelled) break;
+                    await this.#processBlock(b, callbacks);
                 }
 
                 callbacks.onProgress(endBlock, latestBlock);
@@ -82,26 +82,26 @@ export class BlockScanner {
                 });
             }
 
-            if (!this.cancelled) {
+            if (!this.#cancelled) {
                 callbacks.onComplete(latestBlock);
             }
         } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : String(err);
+            const msg: string = err instanceof Error ? err.message : String(err);
             callbacks.onError(msg);
         }
     }
 
     stop(): void {
-        this.cancelled = true;
+        this.#cancelled = true;
     }
 
-    private async processBlock(
+    async #processBlock(
         blockNumber: number,
         callbacks: ScanCallbacks,
     ): Promise<void> {
         let block: Block;
         try {
-            block = await this.provider.getBlock(BigInt(blockNumber), true);
+            block = await this.#provider.getBlock(BigInt(blockNumber), true);
         } catch {
             // Skip blocks we cannot fetch
             return;
@@ -111,17 +111,17 @@ export class BlockScanner {
         if (!txs || txs.length === 0) return;
 
         for (const tx of txs) {
-            if (this.cancelled) return;
+            if (this.#cancelled) return;
 
             // TransactionBase extends TransactionReceipt, so events are already present
             const events: ContractEvents = tx.events;
             if (!events) continue;
 
-            this.processEvents(events, blockNumber, tx.hash, callbacks);
+            this.#processEvents(events, blockNumber, tx.hash, callbacks);
         }
     }
 
-    private processEvents(
+    #processEvents(
         events: ContractEvents,
         blockNumber: number,
         txHash: string,
@@ -134,10 +134,10 @@ export class BlockScanner {
                 if (event.type !== 'Approved') continue;
 
                 try {
-                    const decoded = decodeApprovedEvent(event.data);
-                    const ownerHex = decoded.owner.toHex().toLowerCase();
+                    const decoded: DecodedApprovedEvent = decodeApprovedEvent(event.data);
+                    const ownerHex: string = decoded.owner.toHex().toLowerCase();
 
-                    if (ownerHex !== this.ownerHex) continue;
+                    if (ownerHex !== this.#ownerHex) continue;
 
                     callbacks.onApprovalFound({
                         tokenAddress: contractAddress,

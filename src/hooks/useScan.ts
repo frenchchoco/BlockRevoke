@@ -172,15 +172,13 @@ export function useScan(): UseScanReturn {
                     },
 
                     onError: (scanError: string): void => {
-                        console.error('[BlockScanner]', scanError);
                         setScanning(false);
                         scannerRef.current = null;
                         toast.error('Scan failed', { description: scanError });
                     },
                 });
             } catch (err: unknown) {
-                const msg = err instanceof Error ? err.message : String(err);
-                console.error('[useScan] failed to start scan', msg);
+                const msg: string = err instanceof Error ? err.message : String(err);
                 setScanning(false);
                 toast.error('Scan failed to start', { description: msg });
             }

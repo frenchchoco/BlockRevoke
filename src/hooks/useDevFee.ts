@@ -1,11 +1,10 @@
-import { useMemo } from 'react';
 import { create } from 'zustand';
 import { useWallet } from './useWallet';
 import { getFreeRevokesRemaining, isFeeRequired, getDevFeeSats } from '../services/feeService';
 
 interface FeeRevisionState {
-    revision: number;
-    bump: () => void;
+    readonly revision: number;
+    readonly bump: () => void;
 }
 
 export const useFeeRevisionStore = create<FeeRevisionState>((set) => ({
@@ -14,24 +13,24 @@ export const useFeeRevisionStore = create<FeeRevisionState>((set) => ({
 }));
 
 interface DevFeeInfo {
-    freeRemaining: number;
-    feeRequired: boolean;
-    feeSats: bigint;
+    readonly freeRemaining: number;
+    readonly feeRequired: boolean;
+    readonly feeSats: bigint;
 }
 
 export function useDevFee(): DevFeeInfo {
     const { walletAddress } = useWallet();
-    const revision = useFeeRevisionStore((s) => s.revision);
+    // Subscribe to revision so the hook re-renders after each revoke usage.
+    // The value itself is intentionally unused — it only triggers recalculation.
+    useFeeRevisionStore((s) => s.revision);
 
-    return useMemo((): DevFeeInfo => {
-        if (!walletAddress) {
-            return { freeRemaining: 0, feeRequired: false, feeSats: 0n };
-        }
-        return {
-            freeRemaining: getFreeRevokesRemaining(walletAddress),
-            feeRequired: isFeeRequired(walletAddress),
-            feeSats: getDevFeeSats(),
-        };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- revision triggers re-evaluation after revoke usage
-    }, [walletAddress, revision]);
+    if (!walletAddress) {
+        return { freeRemaining: 0, feeRequired: false, feeSats: 0n };
+    }
+
+    return {
+        freeRemaining: getFreeRevokesRemaining(walletAddress),
+        feeRequired: isFeeRequired(walletAddress),
+        feeSats: getDevFeeSats(),
+    };
 }

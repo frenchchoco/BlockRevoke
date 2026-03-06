@@ -7,9 +7,18 @@ interface FreeRevokeRecord {
 }
 
 function getRecords(): FreeRevokeRecord {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw: string | null = localStorage.getItem(STORAGE_KEY);
     if (!raw) return {};
-    return JSON.parse(raw) as FreeRevokeRecord;
+
+    try {
+        const parsed: unknown = JSON.parse(raw);
+        if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+            return {};
+        }
+        return parsed as FreeRevokeRecord;
+    } catch {
+        return {};
+    }
 }
 
 export function getFreeRevokesUsed(walletAddress: string): number {

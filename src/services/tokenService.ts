@@ -1,8 +1,6 @@
-import { getContract, OP_20_ABI, type IOP20Contract } from 'opnet';
-import { Address } from '@btc-vision/transaction';
 import type { NetworkId } from '../types/network';
 import type { TokenInfo } from '../types/approval';
-import { getReadProvider, getNetwork } from './providerService';
+import { getOP20Contract } from './contractService';
 
 const tokenMetaCache = new Map<string, TokenInfo>();
 
@@ -14,16 +12,7 @@ export async function fetchTokenMeta(
     const cached = tokenMetaCache.get(tokenAddress);
     if (cached) return cached;
 
-    const provider = getReadProvider(networkId);
-    const network = getNetwork(networkId);
-    const addr = Address.fromString(tokenAddress);
-
-    const contract = getContract<IOP20Contract>(
-        addr,
-        OP_20_ABI,
-        provider,
-        network,
-    );
+    const contract = getOP20Contract(tokenAddress, networkId);
 
     let name = 'Unknown';
     let symbol = '???';

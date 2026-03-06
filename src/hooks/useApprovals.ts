@@ -6,7 +6,7 @@ import { discoverKnownApprovals } from '../services/approvalService';
 import { getCachedApprovals } from '../services/cacheService';
 import { UNLIMITED_THRESHOLD } from '../config/constants';
 import { calculateRiskScore } from '../lib/riskScoring';
-import type { Approval, ApprovalHistory } from '../types/approval';
+import type { Approval, ApprovalHistory, DiscoverySource } from '../types/approval';
 
 interface UseApprovalsReturn {
     approvals: Approval[];
@@ -54,7 +54,7 @@ export function useApprovals(): UseApprovalsReturn {
                             allowance,
                             isUnlimited: allowance >= UNLIMITED_THRESHOLD,
                             riskScore: calculateRiskScore(allowance, 0n, isKnown),
-                            discoveredVia: c.discoveredVia as Approval['discoveredVia'],
+                            discoveredVia: (c.discoveredVia === 'scan' ? 'scan' : 'known') as DiscoverySource,
                             lastUpdatedBlock: c.lastUpdatedBlock,
                             lastUpdatedTxHash: c.lastUpdatedTxHash,
                         };

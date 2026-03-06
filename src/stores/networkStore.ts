@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { NetworkId } from '../types/network';
+import { clearContractCache } from '../services/contractService';
 
 interface NetworkState {
   networkId: NetworkId;
@@ -12,6 +13,7 @@ export const useNetworkStore = create<NetworkState>()(
     (set) => ({
       networkId: 'mainnet',
       setNetwork: (networkId: NetworkId): void => {
+        clearContractCache();
         set({ networkId });
       },
     }),

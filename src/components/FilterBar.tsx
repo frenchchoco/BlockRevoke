@@ -17,13 +17,19 @@ interface FilterBarProps {
     readonly onFiltered: (filtered: Approval[]) => void;
 }
 
-const RISK_OPTIONS: { value: RiskFilter; label: string }[] = [
+const RISK_OPTIONS: readonly { readonly value: RiskFilter; readonly label: string }[] = [
     { value: 'all', label: 'All Risks' },
     { value: 'critical', label: 'Critical' },
     { value: 'high', label: 'High' },
     { value: 'medium', label: 'Medium' },
     { value: 'low', label: 'Low' },
-];
+] as const;
+
+const VALID_RISK_FILTERS = new Set<string>(RISK_OPTIONS.map((o) => o.value));
+
+function isRiskFilter(value: string): value is RiskFilter {
+    return VALID_RISK_FILTERS.has(value);
+}
 
 export function FilterBar({ approvals, onFiltered }: FilterBarProps): ReactElement {
     const [riskFilter, setRiskFilter] = useState<RiskFilter>('all');
@@ -57,7 +63,9 @@ export function FilterBar({ approvals, onFiltered }: FilterBarProps): ReactEleme
     }, [filtered, onFiltered]);
 
     const handleRiskChange = useCallback((value: string): void => {
-        setRiskFilter(value as RiskFilter);
+        if (isRiskFilter(value)) {
+            setRiskFilter(value);
+        }
     }, []);
 
     const handleSearchChange = useCallback(

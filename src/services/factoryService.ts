@@ -61,12 +61,12 @@ const FACTORY_ADDRESSES: Partial<Record<NetworkId, string>> = {
  */
 export async function discoverFactoryTokens(
     networkId: NetworkId,
-): Promise<TokenInfo[]> {
-    const factoryAddr = FACTORY_ADDRESSES[networkId];
+): Promise<readonly TokenInfo[]> {
+    const factoryAddr: string | undefined = FACTORY_ADDRESSES[networkId];
     if (!factoryAddr) return [];
 
     // Try IndexedDB cache first
-    const cached = await getCachedFactoryTokens(networkId);
+    const cached: readonly TokenInfo[] = await getCachedFactoryTokens(networkId);
     if (cached.length > 0) return cached;
 
     const provider = getReadProvider(networkId);

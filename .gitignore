@@ -19,6 +19,11 @@ vite.config.d.ts
 src/**/*.d.ts
 src/**/*.d.ts.map
 
+# Environment
+.env
+.env.local
+.env.production
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
