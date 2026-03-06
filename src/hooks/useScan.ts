@@ -15,11 +15,7 @@ import {
 } from '../services/cacheService';
 import { fetchTokenMeta } from '../services/tokenService';
 import { getOP20Contract } from '../services/contractService';
-import {
-    queryIndexer,
-    submitEvents,
-    type IndexedEvent,
-} from '../services/indexerService';
+import { queryIndexer } from '../services/indexerService';
 import { Address } from '@btc-vision/transaction';
 import { KNOWN_SPENDERS } from '../config/knownSpenders';
 import { UNLIMITED_THRESHOLD } from '../config/constants';
@@ -84,10 +80,8 @@ export function useScan(): UseScanReturn {
                 const genesisBlock = NETWORK_CONFIGS[net].startBlock;
                 let fromBlock = lastScanned > 0 ? lastScanned + 1 : genesisBlock;
 
-                // ── Phase 0: Try the crowdsourced indexer first ──
-                // If the API has cached events, we skip scanning those blocks.
+                // ── Phase 0: Query the indexer for cached events ──
                 const uniquePairs = new Map<string, DiscoveredApproval>();
-                const allDiscoveredEvents: IndexedEvent[] = [];
 
                 try {
                     const indexed = await queryIndexer(net, ownerHex);
@@ -149,16 +143,6 @@ export function useScan(): UseScanReturn {
                         ) {
                             uniquePairs.set(key, discovered);
                         }
-
-                        // Collect for crowdsourced indexing
-                        allDiscoveredEvents.push({
-                            token: discovered.tokenAddress,
-                            spender: discovered.spenderAddress,
-                            owner: discovered.ownerAddress,
-                            allowance: discovered.allowance.toString(),
-                            block: discovered.blockNumber,
-                            txHash: discovered.txHash,
-                        });
                     },
 
                     onProgress: (current: number, latest: number): void => {
@@ -178,11 +162,6 @@ export function useScan(): UseScanReturn {
                 });
 
                 if (cancelledRef.current) return;
-
-                // ── Push discovered events to the crowdsourced indexer ──
-                if (allDiscoveredEvents.length > 0) {
-                    void submitEvents(net, allDiscoveredEvents, fromBlock, scanEndBlock);
-                }
 
                 // ── Phase 2: Verify on-chain allowances ──
                 setPhase('verifying');
