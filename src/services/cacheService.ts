@@ -124,6 +124,7 @@ export async function getCachedApprovals(
     const all = await db.getAll('approvals');
     const allKeys = await db.getAllKeys('approvals');
     const matching: CachedApproval[] = [];
+    const keysToDelete: string[] = [];
 
     for (let i = 0; i < all.length; i++) {
         const a = all[i] as CachedApproval;
@@ -131,11 +132,14 @@ export async function getCachedApprovals(
         if (a.networkId !== networkId || a.walletAddress !== walletAddress) continue;
         if (a.allowance === '0') {
             // Clean up stale zero-allowance entries from IndexedDB
-            void db.delete('approvals', key);
+            keysToDelete.push(key);
             continue;
         }
         matching.push(a);
     }
+
+    // Batch-delete stale zero-allowance entries
+    await Promise.all(keysToDelete.map((k) => db.delete('approvals', k)));
 
     return matching;
 }

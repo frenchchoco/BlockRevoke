@@ -98,8 +98,7 @@ export function FeeSelector({
         if (liveRates && selectedTier !== 'custom') {
             setSelectedTier(defaultTier);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [liveRates]);
+    }, [liveRates, defaultTier]); // selectedTier intentionally excluded — only reset on new rates
 
     const handleTierClick = useCallback((key: TierKey): void => {
         setSelectedTier(key);

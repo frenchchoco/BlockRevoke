@@ -99,17 +99,22 @@ export function useScan(): UseScanReturn {
 
                         // Hydrate unique pairs from cached events
                         for (const evt of indexed.events) {
-                            const key = `${evt.token}:${evt.spender}`;
-                            const existing = uniquePairs.get(key);
-                            if (!existing || evt.block > existing.blockNumber) {
-                                uniquePairs.set(key, {
-                                    tokenAddress: evt.token,
-                                    spenderAddress: evt.spender,
-                                    ownerAddress: evt.owner,
-                                    allowance: BigInt(evt.allowance),
-                                    blockNumber: evt.block,
-                                    txHash: evt.txHash,
-                                });
+                            try {
+                                const key = `${evt.token}:${evt.spender}`;
+                                const existing = uniquePairs.get(key);
+                                if (!existing || evt.block > existing.blockNumber) {
+                                    uniquePairs.set(key, {
+                                        tokenAddress: evt.token,
+                                        spenderAddress: evt.spender,
+                                        ownerAddress: evt.owner,
+                                        allowance: BigInt(evt.allowance),
+                                        blockNumber: evt.block,
+                                        txHash: evt.txHash,
+                                    });
+                                }
+                            } catch {
+                                // Skip malformed events (e.g. non-numeric allowance)
+                                continue;
                             }
                         }
 

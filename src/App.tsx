@@ -43,8 +43,9 @@ export default function App(): ReactElement {
 
     // Wrap confirmRevoke to trigger celebration + pass feeRate
     const confirmRevoke = useCallback((feeRate?: number): void => {
-        rawConfirmRevoke(feeRate);
-        setShowCelebration(true);
+        void rawConfirmRevoke(feeRate).then(() => {
+            setShowCelebration(true);
+        });
     }, [rawConfirmRevoke]);
 
     // Edit action

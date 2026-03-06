@@ -52,7 +52,7 @@ export function BatchActions({
             setLiveRates(rates);
             setRatesLoading(false);
         });
-    }, [count > 0, networkId]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [count, networkId]);
 
     const handleFeeChange = useCallback((rate: number): void => {
         setSelectedFeeRate(rate);

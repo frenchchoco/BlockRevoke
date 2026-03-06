@@ -117,9 +117,8 @@ export class BlockScanner {
                             if (this.#cancelled) break;
                             this.#processBlockData(block, callbacks);
                         }
+                        highestCompleted = batch.to;
                     }
-
-                    highestCompleted = batch.to;
                 }
 
                 callbacks.onProgress(highestCompleted, latestBlock);
