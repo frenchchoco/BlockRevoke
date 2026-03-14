@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "postinstall": "npx patch-package"
   },
   "overrides": {
     "@noble/hashes": "2.0.1"
@@ -46,6 +47,7 @@
     "eslint": "^9.39.2",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
+    "patch-package": "^8.0.1",
     "shadcn": "^3.8.5",
     "stream-browserify": "^3.0.0",
     "tailwindcss": "^4.2.1",

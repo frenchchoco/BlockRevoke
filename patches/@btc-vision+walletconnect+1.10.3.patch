@@ -1,0 +1,18 @@
+diff --git a/node_modules/@btc-vision/walletconnect/build/provider/WalletConnectProvider.js b/node_modules/@btc-vision/walletconnect/build/provider/WalletConnectProvider.js
+index 6ddf5c5..32f929b 100644
+--- a/node_modules/@btc-vision/walletconnect/build/provider/WalletConnectProvider.js
++++ b/node_modules/@btc-vision/walletconnect/build/provider/WalletConnectProvider.js
+@@ -104,9 +104,12 @@ const WalletConnectProvider = ({ theme, children }) => {
+                 setSelectedWallet(wallet);
+                 localStorage.setItem('WC_SelectedWallet', wallet);
+             }
+-            else if (response.data && 'message' in response.data) {
++            else if (response.data && typeof response.data === 'object' && 'message' in response.data) {
+                 setConnectError(response.data.message);
+             }
++            else if (typeof response.data === 'string' && response.data.includes('ACK_KEEP_ALIVE')) {
++                // Ignore keep-alive messages from the wallet
++            }
+             else {
+                 setConnectError('Unknown error');
+             }
